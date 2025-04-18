@@ -4,8 +4,8 @@ import logging
 import sys
 import time
 
-from ...registers import Words
-from ..modbus import AddressDict, ModbusConnection
+from wg750xxx.modbus.registers import Words
+from wg750xxx.modbus.state import AddressDict, ModbusConnection
 from .control_byte import ControlByte
 from .exceptions import DaliError
 from .status_byte import StatusByte

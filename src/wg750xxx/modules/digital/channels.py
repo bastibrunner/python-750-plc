@@ -2,9 +2,9 @@
 
 from typing import Any
 
+from wg750xxx.modbus.state import Coil, Discrete
 from ..channel import WagoChannel
 from ..exceptions import WagoModuleError
-from ..modbus import Coil, Discrete
 
 
 class DigitalIn(WagoChannel):

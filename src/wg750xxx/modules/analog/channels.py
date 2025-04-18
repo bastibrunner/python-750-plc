@@ -21,8 +21,10 @@ class Int16In(WagoChannel):
         """Initialize the Int16In channel."""
         super().__init__("Int16 In", *args, **kwargs)
 
-    def read(self) -> int:
+    def read(self) -> int | None:
         """Read the value of the channel."""
+        if self.modbus_channel is None:
+            return None
         return self.modbus_channel.read()
 
     def write(self, value: Any) -> None:

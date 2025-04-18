@@ -96,7 +96,7 @@ class DaliChannelCommands:
             timeout=timeout,
         )
 
-    def _read_command(self, command_code: int) -> DaliInputMessage:
+    def _read_command(self, command_code: int) -> DaliInputMessage | None:
         """Read a command from the DALI channel."""
         return self.dali_communication_register.write(
             DaliOutputMessage(

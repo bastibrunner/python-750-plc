@@ -116,6 +116,7 @@ class WagoModule:
         self.description: str = type(self).description
         self.modbus_connection: ModbusConnection = modbus_connection
         self._modbus_address: AddressDict | None = None
+        self._display_name: str | None = None
 
         log.debug("Initializing module %s", self.__repr__())
 
@@ -181,7 +182,7 @@ class WagoModule:
             self.spec.module_type = str(self.module_identifier)
 
     @property
-    def modbus_address(self) -> AddressDict:
+    def modbus_address(self) -> AddressDict | None:
         """Get the modbus address of the module.
 
         The modbus address of the module.
@@ -236,9 +237,19 @@ class WagoModule:
             raise WagoModuleError(
                 f"Module type {config.type} does not match {self.spec.module_type}"
             )
-        self.display_name = config.name
+        self._display_name = config.name or self.display_name
         self.index = config.index
         self._config = config
+
+    @property
+    def name(self) -> str:
+        """Get the display name of the module."""
+        return self._display_name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        """Set the display name of the module."""
+        self._display_name = value
 
     @abstractmethod
     def create_channels(self) -> None:

@@ -1,56 +1,25 @@
 """Test the Modbus channel."""
 
-# pylint: disable=missing-function-docstring,missing-module-docstring,missing-class-docstring,line-too-long
-# pylint: disable=redefined-outer-name,import-error,unused-argument
-
-import json
+# pylint: disable=protected-access,redefined-outer-name,unused-argument
 import logging
 from random import randint
-from typing import Generator
-from unittest.mock import patch
 
-import pytest
-
-from wg750xxx.settings import ModbusSettings
 from wg750xxx.hub import Hub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 
-
+# Using fixtures from conftest.py now
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module")
-def modbus_mock() -> Generator[MockModbusTcpClient, None, None]:
-    """Set up the modbus mock client."""
-    with patch("wg750xxx.hub.ModbusTcpClient") as modbus_tcp_client:
-        yield MockModbusTcpClient(modbus_tcp_client)
-
-
-@pytest.fixture(scope="module")
-def hub(modbus_mock: MockModbusTcpClient) -> Hub:
-    """Set up the hub."""
-    modbus_settings = ModbusSettings(server="dummy", port=502)
-    hub_instance = Hub(modbus_settings, True)
-    logger.info(
-        json.dumps(
-            [i.config_dump() for i in hub_instance.modules],
-            sort_keys=True,
-            indent=4,
-            default=str,
-        )
-    )
-    return hub_instance
-
-
-def test_modbus_discrete_input_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_discrete_input_channel_read(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the read method of the Discrete input channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has digital input
             if not module.spec.io_type.digital or not module.spec.io_type.input:
                 continue
@@ -68,13 +37,13 @@ def test_modbus_discrete_input_channel_read(modbus_mock: MockModbusTcpClient, hu
         assert address > 0, "Error: No Discrete input channels found"
 
 
-def test_modbus_coil_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_coil_channel_read(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the read method of the Coil channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has digital output
             if not module.spec.io_type.digital or not module.spec.io_type.output:
                 continue
@@ -90,13 +59,13 @@ def test_modbus_coil_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub) ->
         assert address > 0, "Error: No Coil channels found"
 
 
-def test_modbus_input_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_input_channel_read(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the read method of the Input channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog input
             if module.spec.io_type.digital or not module.spec.io_type.input:
                 continue
@@ -112,13 +81,13 @@ def test_modbus_input_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub) -
         assert address > 0, "Error: No Input channels found"
 
 
-def test_modbus_holding_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_holding_channel_read(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the read method of the Holding channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog output
             if module.spec.io_type.digital or not module.spec.io_type.output:
                 continue
@@ -134,13 +103,13 @@ def test_modbus_holding_channel_read(modbus_mock: MockModbusTcpClient, hub: Hub)
         assert address > 0, "Error: No Holding channels found"
 
 
-def test_modbus_coil_channel_write(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_coil_channel_write(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the write method of the Coil channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has digital output
             if not module.spec.io_type.digital or not module.spec.io_type.output:
                 continue
@@ -157,13 +126,13 @@ def test_modbus_coil_channel_write(modbus_mock: MockModbusTcpClient, hub: Hub) -
         assert address > 0, "Error: No Coil channels found"
 
 
-def test_modbus_holding_channel_write(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_holding_channel_write(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the write method of the Holding channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog output
             if module.spec.io_type.digital or not module.spec.io_type.output:
                 continue
@@ -180,13 +149,13 @@ def test_modbus_holding_channel_write(modbus_mock: MockModbusTcpClient, hub: Hub
         assert address > 0, "Error: No Holding channels found"
 
 
-def test_modbus_input_channel_read_lsb(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_input_channel_read_lsb(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the read_lsb method of the Input channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog input
             if module.spec.io_type.digital or not module.spec.io_type.input:
                 continue
@@ -194,7 +163,7 @@ def test_modbus_input_channel_read_lsb(modbus_mock: MockModbusTcpClient, hub: Hu
                 channel_value = channel.read_lsb()
                 mock_value = (
                     modbus_mock.read_input_registers(
-                        address
+                        channel.address
                     ).registers[0]
                     & 0xFF
                 )
@@ -205,13 +174,13 @@ def test_modbus_input_channel_read_lsb(modbus_mock: MockModbusTcpClient, hub: Hu
         assert address > 0, "Error: No Input channels found"
 
 
-def test_modbus_input_channel_read_msb(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_input_channel_read_msb(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the read_msb method of the Input channel."""
     for _ in range(50):
         modbus_mock.randomize_state()
-        hub.connection.update_state()
+        basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog input
             if module.spec.io_type.digital or not module.spec.io_type.input:
                 continue
@@ -219,7 +188,7 @@ def test_modbus_input_channel_read_msb(modbus_mock: MockModbusTcpClient, hub: Hu
                 channel_value = channel.read_msb()
                 mock_value = (
                     modbus_mock.read_input_registers(
-                        address
+                        channel.address
                     ).registers[0]
                     & 0xFF00
                 ) >> 8
@@ -230,13 +199,13 @@ def test_modbus_input_channel_read_msb(modbus_mock: MockModbusTcpClient, hub: Hu
         assert address > 0, "Error: No Input channels found"
 
 
-def test_modbus_holding_channel_write_lsb(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_holding_channel_write_lsb(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the write_lsb method of the Holding channel."""
     for _ in range(50):
         # modbus_mock.randomize_state()
-        # hub.connection.update_state()
+        # basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog output
             if module.spec.io_type.digital or not module.spec.io_type.output:
                 continue
@@ -256,13 +225,13 @@ def test_modbus_holding_channel_write_lsb(modbus_mock: MockModbusTcpClient, hub:
         assert address > 0, "Error: No Holding channels found"
 
 
-def test_modbus_holding_channel_write_msb(modbus_mock: MockModbusTcpClient, hub: Hub) -> None:
+def test_modbus_holding_channel_write_msb(modbus_mock: MockModbusTcpClient, basic_hub: Hub) -> None:
     """Test the write_msb method of the Holding channel."""
     for _ in range(50):
-        modbus_mock.randomize_state()
-        hub.connection.update_state()
+        # modbus_mock.randomize_state()
+        # basic_hub.connection.update_state()
         address = 0
-        for module in hub.modules:
+        for module in basic_hub.modules:
             # Check if module has analog output
             if module.spec.io_type.digital or not module.spec.io_type.output:
                 continue

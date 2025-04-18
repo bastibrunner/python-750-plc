@@ -1,6 +1,6 @@
 """Module for representing a DALI control byte."""
 
-from ..modbus import Words
+from ...modbus.registers import Words
 
 
 class ControlByte:

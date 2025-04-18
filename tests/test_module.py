@@ -1,31 +1,32 @@
 """Tests for the Wago PLC module configuration."""
 
-from typing import List
+# pylint: disable=protected-access,redefined-outer-name,unused-argument
+
+from typing import List, Generator
 
 import pytest
-
 from wg750xxx.hub import Hub
 from wg750xxx.settings import HubConfig
 from wg750xxx.modules.module import ModuleConfig
 
 
 @pytest.fixture(scope="module")
-def hub() -> Hub:
+def hub() -> Generator[Hub, None, None]:
     """Create a Hub instance for testing."""
     hub_instance = Hub(HubConfig(host="10.22.22.16", port=502), True)
     yield hub_instance
 
 
 @pytest.fixture(scope="module")
-def module_config(hub: Hub) -> List[ModuleConfig]:  # pylint: disable=redefined-outer-name
+def module_config(hub: Hub) -> List[ModuleConfig]:
     """Store module configuration for debugging."""
     return [i.config_dump() for i in hub.modules]
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_read_register(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_read_register(hub: Hub) -> None:
     """Test reading registers."""
-    # pylint: disable=protected-access,unused-variable
+
     register = hub._client.read_input_registers(
         0x0000, count=36
     )  # hub.count_bits_digital_in / 16
@@ -58,7 +59,7 @@ def test_read_register(hub: Hub) -> None:  # pylint: disable=redefined-outer-nam
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_count_analog(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_count_analog(hub: Hub) -> None:
     """Test counting analog modules."""
     assert len(hub.get_digital_modules()) == 36, (
         f"Error: expected 12 digital modules, got {len(hub.get_digital_modules())}"
@@ -66,7 +67,7 @@ def test_module_count_analog(hub: Hub) -> None:  # pylint: disable=redefined-out
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_count_digital(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_count_digital(hub: Hub) -> None:
     """Test counting digital modules."""
     assert len(hub.get_analog_modules()) == 11, (
         f"Error: expected 11 analog modules, got {len(hub.get_analog_modules())}"
@@ -74,7 +75,7 @@ def test_module_count_digital(hub: Hub) -> None:  # pylint: disable=redefined-ou
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_count_total(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_count_total(hub: Hub) -> None:
     """Test counting total modules."""
     assert len(hub.modules) == 47, (
         f"Error: expected 47 modules, got {len(hub.modules)}"
@@ -82,7 +83,7 @@ def test_module_count_total(hub: Hub) -> None:  # pylint: disable=redefined-oute
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_digital_input_bits_match(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_digital_input_bits_match(hub: Hub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
         module.spec.modbus_channels["discrete"]
@@ -95,7 +96,7 @@ def test_module_digital_input_bits_match(hub: Hub) -> None:  # pylint: disable=r
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_digital_output_bits_match(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_digital_output_bits_match(hub: Hub) -> None:
     """Test matching digital output bits."""
     digital_outputs_bits = sum(
         module.spec.modbus_channels["coil"]
@@ -108,7 +109,7 @@ def test_module_digital_output_bits_match(hub: Hub) -> None:  # pylint: disable=
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_analog_input_bits_match(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_analog_input_bits_match(hub: Hub) -> None:
     """Test matching analog input bits."""
     analog_inputs_bits = (
         sum(
@@ -124,7 +125,7 @@ def test_module_analog_input_bits_match(hub: Hub) -> None:  # pylint: disable=re
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_module_analog_output_bits_match(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_module_analog_output_bits_match(hub: Hub) -> None:
     """Test matching analog output bits."""
     analog_outputs_bits = (
         sum(
@@ -140,7 +141,7 @@ def test_module_analog_output_bits_match(hub: Hub) -> None:  # pylint: disable=r
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")
-def test_channel_count_match_all_modules(hub: Hub) -> None:  # pylint: disable=redefined-outer-name
+def test_channel_count_match_all_modules(hub: Hub) -> None:
     """Test matching channel counts for all modules."""
     for module in hub.modules:
         channels_spec = sum(module.spec.modbus_channels.values())
@@ -170,7 +171,7 @@ def test_channel_count_match_all_modules(hub: Hub) -> None:  # pylint: disable=r
         (33281, "discrete"),
     ],
 )
-def test_module_channel_type(  # pylint: disable=redefined-outer-name
+def test_module_channel_type(
     hub: Hub, module_idx: int, modbus_channel_type: str
 ) -> None:
     """Test module channel types."""
@@ -198,7 +199,7 @@ def test_module_channel_type(  # pylint: disable=redefined-outer-name
         (33281, "discrete", 0x0000),
     ],
 )
-def test_module_addresses(  # pylint: disable=redefined-outer-name
+def test_module_addresses(
     hub: Hub, module_idx: int, modbus_channel_type: str, start_address: int
 ) -> None:
     """Test module addresses."""

@@ -40,14 +40,16 @@ class DaliCommands:
             self._dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x06), response=True
-                )
+                ),
+                offset=0
             )
         )
         channels.extend(
             self._dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x07), response=True
-                )
+                ),
+                offset=32
             )
         )
         return channels
@@ -202,16 +204,16 @@ class DaliCommands:
         )
 
     def _dali_response_to_channel_list(
-        self, response: DaliInputMessage | None
+        self, response: DaliInputMessage | None, offset: int = 0
     ) -> list[int]:
         """Convert DALI response to channel list."""
         channels = []
         if response is None:
             return channels
         channels.extend(
-            [0 + i for bit, i in iterate_bits(response.dali_response) if bit]
+            [offset + i for bit, i in iterate_bits(response.dali_response) if bit]
         )
-        channels.extend([8 + i for bit, i in iterate_bits(response.message_3) if bit])
-        channels.extend([16 + i for bit, i in iterate_bits(response.message_2) if bit])
-        channels.extend([24 + i for bit, i in iterate_bits(response.message_1) if bit])
+        channels.extend([offset + 8 + i for bit, i in iterate_bits(response.message_3) if bit])
+        channels.extend([offset + 16 + i for bit, i in iterate_bits(response.message_2) if bit])
+        channels.extend([offset + 24 + i for bit, i in iterate_bits(response.message_1) if bit])
         return channels

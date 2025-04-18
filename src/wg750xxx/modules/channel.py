@@ -88,7 +88,10 @@ class WagoChannel:
 
     def __str__(self) -> str:
         """Get a string representation of the channel."""
-        return f"{self.channel_type} {self.modbus_channel.address}"
+        if self.modbus_channel is None:
+            return f"{self.channel_type} (no modbus address)"
+        else:
+            return f"{self.channel_type} {self.modbus_channel.address}"
 
     def __repr__(self) -> str:
         """Get a representation of the channel."""
