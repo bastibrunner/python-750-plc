@@ -1,7 +1,7 @@
 """Dali module."""
 
 from collections.abc import Iterator
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from homeassistant.core import logging
 
@@ -65,7 +65,7 @@ class Wg750DaliMaster(WagoModule):
         """Iterate over the DALI channels."""
         if self.channel is None:
             return iter([])
-        return iter(self.channel)
+        return iter(cast(list[DaliChannel], self.channel))
 
     def _read_status_byte(self) -> int:
         """Read the status byte of the DALI message."""

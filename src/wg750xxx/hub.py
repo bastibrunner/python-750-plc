@@ -71,7 +71,7 @@ class Modules:
             modules = [m for m in self._modules if index in m.aliases]
             if not modules:
                 raise KeyError(f"No module found with alias {index}")
-            return modules
+            return modules[0] if len(modules) == 1 else modules
         else:
             raise TypeError("Index must be integer, slice, or string")
 
@@ -109,6 +109,7 @@ class Hub:
         """Initialize the hub."""
         self.config = config
         self.modules: Modules = Modules()
+        self._discovery_register_values: list[int] = []
         self._discovered_modules: list[int] = []
         self._process_state_width: ModbusChannelSpec = ModbusChannelSpec(
             input=0, holding=0, discrete=0, coil=0
@@ -145,23 +146,18 @@ class Hub:
         self.reset_modules()
         if not self.is_connected:
             self.connect()
+        if self.connection is not None:
+            self.connection.update_state()
 
         self.info: ControllerInfo = self._read_controller_info()
-        self.connection.update_state()
         if discovery:
             self.run_discovery()
-        else:
-            # Even when not running full discovery, we still need to set up some basic modules
-            # for testing to work properly
-            # Create some basic digital modules
-            self._setup_basic_test_modules()
         self.is_initialized = True
         log.debug(self.info)
         log.debug(self.modules)
 
     def _setup_basic_test_modules(self) -> None:
         """Set up basic modules for testing when discovery is disabled."""
-        from .modules.identifier import ModuleIdentifier
 
         # Add a digital input module (DI with 8 channels - 36865)
         self.modules.append_module(
@@ -211,14 +207,23 @@ class Hub:
         )
         self._next_address = self.modules[3].get_next_address()
 
-    def run_discovery(self) -> None:
-        """Run the discovery process."""
-        self.is_module_discovery_done = False
-        try:
-            self._get_connected_modules_from_controller()
+    def run_discovery(self) -> bool:
+        """Run the discovery process.
+
+        Returns:
+            bool: True if the discovery process was successful, False otherwise.
+        """
+        discovery_register_values = self._get_connected_modules_from_controller()
+
+        if discovery_register_values != self._discovery_register_values:
+            self._discovery_register_values = discovery_register_values
+            self.is_module_discovery_done = False
+            self._autocreate_modules()
+            self._validate_module_discovery()
             self.is_module_discovery_done = True
-        except NotImplementedError as e:
-            log.error("Not implemented: %s", e)
+            return True
+        else:
+            return False
 
     def _read_description(self) -> str:
         """Read the description."""
@@ -240,7 +245,7 @@ class Hub:
             log.debug("register: %s", str(register))
             assert item == register, f"Error: {item} != {register}"
 
-    def _get_connected_modules_from_controller(self, reset: bool = True) -> None:
+    def _get_connected_modules_from_controller(self, reset: bool = True) -> list[int]:
         """Read the connected modules from the controller."""
         if reset:
             self.modules.reset_modules()
@@ -248,8 +253,13 @@ class Hub:
         for i in range(3):
             response = self._client.read_input_registers(0x2030 + i, count=64).registers
             register_values = register_values + response
-        for value in register_values:
-            if value != 0 and (len(self.modules) < 1 or reset):
+        return register_values
+
+    def _autocreate_modules(self) -> None:
+        """Autocreate modules from the register values."""
+        self.modules.reset_modules()
+        for value in self._discovery_register_values:
+            if value != 0:
                 index = len(self.modules)
                 module_settings = (
                     self._init_config[index] if index < len(self._init_config) else None
@@ -263,7 +273,6 @@ class Hub:
                         config=module_settings,
                     )
                 )
-                self._next_address = cast(AddressDict, self.modules[-1].get_next_address())
 
     def append_module(self, module: WagoModule) -> None:
         """Append a module to the hub."""
@@ -287,39 +296,44 @@ class Hub:
             "coil": self._read_register(0x1024).value_to_int(),
             "discrete": self._read_register(0x1025).value_to_int(),
         }
-
-        # If any of the widths is 0, try to calculate it from the modules
-        if 0 in channel_spec.values() and len(self.modules) > 0:
-            # Calculate width from modules
-            if channel_spec["discrete"] == 0:
-                channel_spec["discrete"] = sum(
-                    i.spec.modbus_channels.get("discrete", 0)
-                    for i in self.modules
-                    if i.spec.io_type.digital and i.spec.io_type.input
-                )
-
-            if channel_spec["coil"] == 0:
-                channel_spec["coil"] = sum(
-                    i.spec.modbus_channels.get("coil", 0)
-                    for i in self.modules
-                    if i.spec.io_type.digital and i.spec.io_type.output
-                )
-
-            if channel_spec["input"] == 0:
-                channel_spec["input"] = sum(
-                    i.spec.modbus_channels.get("input", 0)
-                    for i in self.modules
-                    if not i.spec.io_type.digital and i.spec.io_type.input
-                ) * 16
-
-            if channel_spec["holding"] == 0:
-                channel_spec["holding"] = sum(
-                    i.spec.modbus_channels.get("holding", 0)
-                    for i in self.modules
-                    if not i.spec.io_type.digital and i.spec.io_type.output
-                ) * 16
-
         return channel_spec
+
+    def _validate_module_discovery(self) -> None:
+        """Validate the module discovery."""
+                # If any of the widths is 0, try to calculate it from the modules
+        # Calculate width from modules
+        self._process_state_width = self._read_data_width_in_state()
+        assert sum(
+            i.spec.modbus_channels.get("discrete", 0)
+            for i in self.modules
+            if i.spec.io_type.digital and i.spec.io_type.input
+        ) == self._process_state_width["discrete"], (
+        f"Discovery failed: Discrete channels count does not match process state width {self._process_state_width['discrete']}"
+        )
+
+        assert sum(
+            i.spec.modbus_channels.get("coil", 0)
+            for i in self.modules
+            if i.spec.io_type.digital and i.spec.io_type.output
+        ) == self._process_state_width["coil"], (
+        f"Discovery failed: Coil channels count does not match process state width {self._process_state_width['coil']}"
+        )
+
+        assert sum(
+            i.spec.modbus_channels.get("input", 0)
+            for i in self.modules
+            if not i.spec.io_type.digital and i.spec.io_type.input
+        ) * 16 == self._process_state_width["input"], (
+        f"Discovery failed: Input channels count does not match process state width {self._process_state_width['input']}"
+        )
+
+        assert sum(
+            i.spec.modbus_channels.get("holding", 0)
+            for i in self.modules
+            if not i.spec.io_type.digital and i.spec.io_type.output
+        ) * 16 == self._process_state_width["holding"], (
+        f"Discovery failed: Holding channels count does not match process state width {self._process_state_width['holding']}"
+        )
 
     def _read_module_diagnostic(self) -> None:
         """Read the module diagnostic."""

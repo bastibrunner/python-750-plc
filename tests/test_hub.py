@@ -4,8 +4,12 @@
 import logging
 from typing import Dict
 
-from wg750xxx.hub import Hub
+from pytest_subtests import SubTests
 
+
+from wg750xxx.hub import Hub
+from wg750xxx.modules.channel import WagoChannel
+from wg750xxx.modules.module import WagoModule
 logger = logging.getLogger(__name__)
 
 # Using fixtures from conftest.py now
@@ -90,10 +94,35 @@ def test_channel_count_match_all_modules(configured_hub: Hub) -> None:
             f"Error in Module {module.display_name}: Channel count mismatch: spec ({channels_spec}) != channels ({channels})"
         )
 
+def test_module_returns_correct_type_when_indexed(
+    configured_hub: Hub
+) -> None:
+    """Test the Dali module returns the correct type when indexed."""
+    assert isinstance(configured_hub.modules[0], WagoModule), (
+        "Module fetched by index should be a WagoModule"
+    )
+    modules_slice = configured_hub.modules[0:5]
+    assert isinstance(modules_slice, list), (
+        "Sliced modules should be a list"
+    )
+    assert all(isinstance(module, WagoModule) for module in modules_slice), (
+        "All items in module slice should be WagoModule instances"
+    )
+    assert isinstance(configured_hub.modules["352"], WagoModule), (
+        "Modules fetched by alias with only one matching module should be a WagoModule"
+    )
+    modules_by_id = configured_hub.modules["559"]
+    assert isinstance(modules_by_id, list), (
+        "Modules fetched by alias with multiple matching modules should be a list"
+    )
+    assert all(isinstance(module, WagoModule) for module in modules_by_id), (
+        "All items in modules fetched by ID should be WagoModule instances"
+    )
 
-def test_all_configured_modules_present(configured_hub: Hub, modules: Dict[int, int]) -> None:
+def test_all_configured_modules_present(subtests: SubTests, configured_hub: Hub, modules: Dict[int, int]) -> None:
     """Test if all configured modules are present."""
     for module_id in modules:
-        assert module_id in [
-            module.module_identifier for module in configured_hub.modules
-        ], f"Module {module_id} is missing from the hub"
+        with subtests.test(f"Module {module_id} is present"):
+            assert module_id in [
+                module.module_identifier for module in configured_hub.modules
+            ], f"Module {module_id} is missing from the hub"

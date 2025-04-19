@@ -2,7 +2,6 @@
 
 from abc import abstractmethod
 from collections.abc import Callable
-from dataclasses import dataclass
 from functools import wraps
 import logging
 from threading import Thread
@@ -12,7 +11,7 @@ from typing import Any, ClassVar, Literal, Self
 from pymodbus.client import ModbusTcpClient
 
 from .registers import Bits, Words
-from .exceptions import ModbusException, ModbusConnectionError, ModbusTimeoutError, ModbusCommunicationError, ModbusProtocolError
+from .exceptions import ModbusCommunicationError
 
 log = logging.getLogger(__name__)
 ModbusChannelType = Literal["coil", "discrete", "input", "holding"]
@@ -20,8 +19,6 @@ ModbusBits = list[bool]
 AddressDict = dict[ModbusChannelType, int]
 ModbusChannelState = int | bool
 ModbusChannelSpec = dict[ModbusChannelType, int]
-ModuleModbusState = dict[ModbusChannelType, Words | Bits]
-
 
 def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
     """Annotate the function to automatically reconnect to the Modbus server."""
@@ -41,9 +38,20 @@ def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
     return wrapper
 
 
-@dataclass
 class ModbusState:
     """Class for handling the state of a Modbus connection."""
+
+    def __init__(self, state_width: ModbusChannelSpec) -> None:
+        self.coil: Bits = Bits(size=state_width["coil"])
+        self.discrete: Bits = Bits(size=state_width["discrete"])
+        self.input: Words = Words(size=state_width["input"])
+        self.holding: Words = Words(size=state_width["holding"])
+
+    def __getitem__(self, key: ModbusChannelType) -> Words | Bits:
+        return getattr(self, key)
+
+    def __setitem__(self, key: ModbusChannelType, value: Words | Bits) -> None:
+        setattr(self, key, value)
 
     input_register_state: Words = Words([])
     holding_register_state: Words = Words([])
@@ -79,13 +87,13 @@ class ModbusConnection:
 
         """
         self.modbus_tcp_client = modbus_tcp_client
-        self.bits_in_state = bits_in_state
-        self.state: ModuleModbusState = ModuleModbusState(
+        self.bits_in_state: ModbusChannelSpec = bits_in_state
+        self.state: ModbusState = ModbusState(
             {
-                "input": Words(size=self.bits_in_state["input"] // 16),
-                "holding": Words(size=self.bits_in_state["holding"] // 16),
-                "discrete": Bits(size=self.bits_in_state["discrete"]),
-                "coil": Bits(size=self.bits_in_state["coil"]),
+                "input": self.bits_in_state["input"] // 16,
+                "holding": self.bits_in_state["holding"] // 16,
+                "discrete": self.bits_in_state["discrete"],
+                "coil": self.bits_in_state["coil"],
             }
         )
         self._update_thread = None
@@ -231,12 +239,21 @@ class ModbusConnection:
         log.debug("Bits: %s", bits.value_to_bin())
         self.state["coil"][address - 0x0200 : address + width - 0x0200] = bits.value
 
-    def update_state(self) -> None:
+    def update_state(self, states: list[ModbusChannelType] | ModbusChannelType | None = None) -> None:
         """Update the state of the Modbus connection."""
-        self.update_input_state()
-        self.update_holding_state()
-        self.update_discrete_state()
-        self.update_coil_state()
+        if states is None:
+            states = ["input", "holding", "discrete", "coil"]
+        elif isinstance(states, ModbusChannelType):
+            states = [states]
+        for state in states:
+            if state == "input":
+                self.update_input_state()
+            elif state == "holding":
+                self.update_holding_state()
+            elif state == "discrete":
+                self.update_discrete_state()
+            elif state == "coil":
+                self.update_coil_state()
 
     def _continuous_update(self) -> None:
         """Continuously update the state of the Modbus connection in a separate thread.
@@ -248,58 +265,38 @@ class ModbusConnection:
         while self._running:
             try:
                 current_time = time.time()
-
                 # Check and update each state type based on its interval
-                if (
-                    current_time - self._last_updates["input"]
-                    >= self._update_intervals["input"]
-                ):
-                    self.update_input_state()
-                    self._last_updates["input"] = current_time
-
-                if (
-                    current_time - self._last_updates["holding"]
-                    >= self._update_intervals["holding"]
-                ):
-                    self.update_holding_state()
-                    self._last_updates["holding"] = current_time
-
-                if (
-                    current_time - self._last_updates["discrete"]
-                    >= self._update_intervals["discrete"]
-                ):
-                    self.update_discrete_state()
-                    self._last_updates["discrete"] = current_time
-
-                if (
-                    current_time - self._last_updates["coil"]
-                    >= self._update_intervals["coil"]
-                ):
-                    self.update_coil_state()
-                    self._last_updates["coil"] = current_time
+                for state_type, interval in self._update_intervals.items():
+                    if (
+                        current_time - self._last_updates[state_type]
+                        >= interval
+                    ):
+                        self.update_state(state_type)
+                        self._last_updates[state_type] = current_time
 
                 # Sleep for a short time to prevent excessive CPU usage
                 # Use the smallest interval as the sleep time, but minimum 0.1 second
                 min_interval = min(self._update_intervals.values())
-                time.sleep(min(min_interval / 10, 0.1))
+                time.sleep(min(min_interval / 10, 0.01))
 
-            except Exception as e:
+            except Exception as e: # pylint: disable=broad-exception-caught
+                # TODO: Catch only specific exceptions
                 log.error("Error in continuous update thread: %s", e)
                 time.sleep(0.5)  # Pause briefly after an error
 
     def start_continuous_update(
         self,
-        interval: float = None,
-        input_interval: float = None,
-        holding_interval: float = None,
-        discrete_interval: float = None,
-        coil_interval: float = None,
+        interval: float | None = None,
+        input_interval: float | None = None,
+        holding_interval: float | None = None,
+        discrete_interval: float | None = None,
+        coil_interval: float | None = None,
     ) -> None:
         """Start a thread that continuously updates the Modbus state.
 
         Args:
             interval: Time in seconds between updates for all state types.
-                     If specified, overrides all individual settings.
+                    If specified, overrides all individual settings.
             input_interval: Time in seconds between input register updates.
             holding_interval: Time in seconds between holding register updates.
             discrete_interval: Time in seconds between discrete input updates.
@@ -310,6 +307,44 @@ class ModbusConnection:
             log.warning("Continuous update thread already running")
             return
 
+        self.set_update_interval(
+            interval=interval,
+            input_interval=input_interval,
+            holding_interval=holding_interval,
+            discrete_interval=discrete_interval,
+            coil_interval=coil_interval,
+        )
+        # Initialize last update times to now
+        current_time = time.time()
+        for state_type in self._last_updates:
+            self._last_updates[state_type] = current_time
+
+        # Start the update thread
+        self._update_thread = Thread(target=self._continuous_update, daemon=True)
+        self._update_thread.start()
+        self._running = True
+        log.info(
+            "Started continuous update thread with individual state type intervals"
+        )
+
+    def set_update_interval(
+        self,
+        interval: float | None = None,
+        input_interval: float | None = None,
+        holding_interval: float | None = None,
+        discrete_interval: float | None = None,
+        coil_interval: float | None = None,
+    ) -> None:
+        """Set the update interval for the continuous update thread.
+
+        Args:
+            interval: Time in seconds between updates for all state types.
+            input_interval: Time in seconds between input register updates.
+            holding_interval: Time in seconds between holding register updates.
+            discrete_interval: Time in seconds between discrete input updates.
+            coil_interval: Time in seconds between coil updates.
+
+        """
         # Set individual intervals if provided
         if interval is not None:
             # If a general interval is provided, use it for all state types
@@ -346,22 +381,6 @@ class ModbusConnection:
                     "Setting coil state update interval to %s seconds", coil_interval
                 )
 
-        # Initialize last update times to now
-        current_time = time.time()
-        for state_type in self._last_updates:
-            self._last_updates[state_type] = current_time
-
-        # Start the update thread
-        self._running = True
-        self._update_thread = Thread(target=self._continuous_update, daemon=True)
-        self._update_thread.start()
-        log.info(
-            "Started continuous update thread with individual state type intervals"
-        )
-
-    def is_continuous_update_running(self) -> bool:
-        """Check if the continuous update thread is running."""
-        return self._running
 
     def stop_continuous_update(self) -> None:
         """Stop the continuous update thread."""

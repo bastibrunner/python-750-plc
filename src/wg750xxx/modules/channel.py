@@ -95,9 +95,12 @@ class WagoChannel:
 
     def __repr__(self) -> str:
         """Get a representation of the channel."""
-        return (
-            f"{self.channel_type} {self.modbus_channel.address} with id {hex(id(self))}"
-        )
+        if self.modbus_channel is None:
+            return f"{self.channel_type} (no modbus address)"
+        else:
+            return (
+                f"{self.channel_type} {self.modbus_channel.address} with id {hex(id(self))}"
+            )
 
     def __eq__(self, other: object) -> bool:
         """Check if the channel is equal to another channel."""

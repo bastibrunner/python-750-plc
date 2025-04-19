@@ -24,8 +24,8 @@ class MockModbusTcpClientForDaliModule(MockModbusTcpClient):
         log.info("Initializing state")
         self._input_registers = [0, 0, 0]  # 3 input registers
         self._holding_registers = [0, 0, 0]  # 3 holding registers
-        self._discrete_inputs = []  # 3 discrete inputs
-        self._coils = []  # 3 coils
+        self._discrete_inputs = []  # 0 discrete inputs
+        self._coils = []  # 0 coils
 
     def read_input_registers(self, address=0, count=2) -> ModbusPDU:
         """Read the input registers."""

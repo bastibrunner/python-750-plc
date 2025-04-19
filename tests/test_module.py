@@ -26,36 +26,39 @@ def module_config(hub: Hub) -> List[ModuleConfig]:
 @pytest.mark.skip(reason="Test needs physical PLC connection")
 def test_read_register(hub: Hub) -> None:
     """Test reading registers."""
+    client = hub._client
+    if client is None:
+        pytest.skip("No physical PLC connection")
 
-    register = hub._client.read_input_registers(
+    register = client.read_input_registers(
         0x0000, count=36
     )  # hub.count_bits_digital_in / 16
     # Store register values for debugging
-    input_registers = register.registers
+    _input_registers = register.registers
 
-    register = hub._client.read_holding_registers(
+    register = client.read_holding_registers(
         0x0200, count=16
     )  # hub.count_bits_analog_out / 16
     # Store register values for debugging
-    holding_registers = register.registers
+    _holding_registers = register.registers
 
-    register = hub._client.read_input_registers(
+    register = client.read_input_registers(
         0x0024, count=10
     )  # hub.count_bits_digital_in / 16
     # Store register values for debugging
-    input_registers_binary = [format(i, "016b") for i in register.registers]
+    _input_registers_binary = [format(i, "016b") for i in register.registers]
 
-    register = hub._client.read_discrete_inputs(
+    register = client.read_discrete_inputs(
         0x0000, count=146
     )  # hub.count_bits_digital_in
     # Store register values for debugging
-    discrete_inputs = register.bits
+    _discrete_inputs = register.bits
 
-    register = hub._client.read_coils(
+    register = client.read_coils(
         0x0200, count=80
     )  # hub.count_bits_digital_out
     # Store register values for debugging
-    coils = register.bits
+    _coils = register.bits
 
 
 @pytest.mark.skip(reason="Test needs physical PLC connection")

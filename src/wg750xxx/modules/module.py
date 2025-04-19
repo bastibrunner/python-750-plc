@@ -224,7 +224,6 @@ class WagoModule:
             if self.channel is not None
             else None
         )
-        # self._config.channels_dict = {f"{self.config.id}_{channel.config.id}": channel.config for channel in self.channel} if self.channel is not None else None
         return self._config
 
     @config.setter
@@ -272,7 +271,8 @@ class WagoModule:
                     != channel.channel_type
                 ):
                     raise ValueError(
-                        f"Channel type {channel_init_config[channel.channel_index].type} reported from hub does not match channel type {channel.channel_type} specified in config"
+                        f"""Channel type {channel_init_config[channel.channel_index].type} reported from
+                        hub does not match channel type {channel.channel_type} specified in config"""
                     )
                 channel.name = channel_init_config[channel.channel_index].name
             elif channel.channel_index >= len(channel_init_config):

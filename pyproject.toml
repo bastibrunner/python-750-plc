@@ -23,3 +23,9 @@ push = false
     "{version}",
     "{pep440_version}",
 ]
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "src",
+    "tests"
+]
