@@ -47,10 +47,14 @@ class Int16Out(WagoChannel):
 
     def write(self, value: Any) -> None:
         """Write a value to the channel."""
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         self.modbus_channel.write(value)
 
     def read(self) -> int:
         """Read the value of the channel."""
+        if self.modbus_channel is None:
+            return None
         return self.modbus_channel.read()
 
 

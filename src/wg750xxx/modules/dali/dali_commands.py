@@ -56,7 +56,7 @@ class DaliCommands:
 
     # 8. Abfrage Status Vorschaltgerät [0-31]
     # 9. Abfrage Status Vorschaltgerät [32-63]
-    def query_status_psu(self) -> None:
+    def query_status_psu(self) -> list[int]:
         """Query status vorschaltgerät."""
         channels = []
         channels.extend(
@@ -96,7 +96,7 @@ class DaliCommands:
 
     # 12. Abfrage Lampenleistung Ein [0-31]
     # 13. Abfrage Lampenleistung Ein [32-63]
-    def query_lamp_power_on(self) -> None:
+    def query_lamp_power_on(self) -> list[int]:
         """Query lamp power on."""
         channels = []
         channels.extend(

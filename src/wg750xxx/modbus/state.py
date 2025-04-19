@@ -10,6 +10,9 @@ from typing import Any, ClassVar, Literal, Self
 
 from pymodbus.client import ModbusTcpClient
 
+from wg750xxx.modules.channel import WagoChannel
+
+
 from .registers import Bits, Words
 from .exceptions import ModbusCommunicationError
 
@@ -53,10 +56,34 @@ class ModbusState:
     def __setitem__(self, key: ModbusChannelType, value: Words | Bits) -> None:
         setattr(self, key, value)
 
-    input_register_state: Words = Words([])
-    holding_register_state: Words = Words([])
-    discrete_input_state: Bits = Bits([])
-    coil_state: Bits = Bits([])
+    def get_changed_addresses(self, current_state: Self) -> set[int]:
+        """Get the addresses that have changed between the current state and the previous state."""
+        changed_addresses = set()
+        for key in self.__dict__:
+            if key in ["input", "holding", "discrete", "coil"]:
+                self_state = getattr(self, key)
+                current = getattr(current_state, key)
+                # Get the minimum length to avoid index errors
+                min_length = min(len(self_state), len(current))
+
+                # Compare values at each address in the range
+                for i in range(min_length):
+                    if self_state[i] != current[i]:
+                        changed_addresses.add(i)
+
+                # If one state is longer than the other, all the additional addresses have changed
+                if len(self_state) > min_length:
+                    changed_addresses.update(range(min_length, len(self_state)))
+                if len(current) > min_length:
+                    changed_addresses.update(range(min_length, len(current)))
+
+        return changed_addresses
+
+    # TODO: Remove these (what are they for?)
+    # input_register_state: Words = Words([])
+    # holding_register_state: Words = Words([])
+    # discrete_input_state: Bits = Bits([])
+    # coil_state: Bits = Bits([])
 
 
 class ModbusConnection:
@@ -112,6 +139,14 @@ class ModbusConnection:
             "coil": 0.0,
         }
 
+        # Channel callback registry: {channel_type: {address: [channels]}}
+        self._channel_registry: dict[ModbusChannelType, dict[int, list[WagoChannel]]] = {
+            "input": {},
+            "holding": {},
+            "discrete": {},
+            "coil": {},
+        }
+
     def reconnect(self) -> None:
         """Reconnect to the Modbus server."""
         if not self.modbus_tcp_client.is_socket_open():
@@ -121,7 +156,7 @@ class ModbusConnection:
             self.modbus_tcp_client.connect()
 
     @auto_reconnect
-    def update_input_state(
+    def _update_input_state(
         self, address: int | None = None, width: int | None = None
     ) -> None:
         """Update the state of the input registers.
@@ -148,7 +183,7 @@ class ModbusConnection:
         self.state["input"][address : address + width] = registers.value
 
     @auto_reconnect
-    def update_holding_state(
+    def _update_holding_state(
         self, address: int | None = None, width: int | None = None
     ) -> None:
         """Update the state of the holding registers.
@@ -181,7 +216,7 @@ class ModbusConnection:
         )
 
     @auto_reconnect
-    def update_discrete_state(
+    def _update_discrete_state(
         self, address: int | None = None, width: int | None = None
     ) -> None:
         """Update the state of the discrete inputs.
@@ -211,7 +246,7 @@ class ModbusConnection:
         self.state["discrete"][address : address + width] = bits.value
 
     @auto_reconnect
-    def update_coil_state(
+    def _update_coil_state(
         self, address: int | None = None, width: int | None = None
     ) -> None:
         """Update the state of the coils.
@@ -239,21 +274,51 @@ class ModbusConnection:
         log.debug("Bits: %s", bits.value_to_bin())
         self.state["coil"][address - 0x0200 : address + width - 0x0200] = bits.value
 
-    def update_state(self, states: list[ModbusChannelType] | ModbusChannelType | None = None) -> None:
+    def update_state(self, states_to_update: list[ModbusChannelType] | ModbusChannelType | None = None) -> None:
         """Update the state of the Modbus connection."""
-        if states is None:
-            states = ["input", "holding", "discrete", "coil"]
-        elif isinstance(states, ModbusChannelType):
-            states = [states]
-        for state in states:
-            if state == "input":
-                self.update_input_state()
-            elif state == "holding":
-                self.update_holding_state()
-            elif state == "discrete":
-                self.update_discrete_state()
-            elif state == "coil":
-                self.update_coil_state()
+        if states_to_update is None:
+            states_to_update = ["input", "holding", "discrete", "coil"]
+        elif isinstance(states_to_update, ModbusChannelType):
+            states_to_update = [states_to_update]
+
+        for modbus_channel_type in states_to_update:
+            # Store the current state before updating
+            current_state = getattr(self.state, modbus_channel_type).copy()
+
+            # Update the state
+            if modbus_channel_type == "input":
+                self._update_input_state()
+            elif modbus_channel_type == "holding":
+                self._update_holding_state()
+            elif modbus_channel_type == "discrete":
+                self._update_discrete_state()
+            elif modbus_channel_type == "coil":
+                self._update_coil_state()
+
+            # Get changed addresses
+            changed_addresses = self.state.get_changed_addresses(current_state)
+
+            # Notify channels about changes
+            self._notify_channels_of_changes(modbus_channel_type, changed_addresses)
+
+    def _notify_channels_of_changes(self, channel_type: ModbusChannelType, changed_addresses: set[int]) -> None:
+        """Notify registered channels about changes in their addresses."""
+        for address in changed_addresses:
+            if address in self._channel_registry[channel_type]:
+                for channel in self._channel_registry[channel_type][address]:
+                    # Read the new value and notify the channel
+                    if channel_type == "input":
+                        value = self.read_input_register(address)
+                    elif channel_type == "holding":
+                        value = self.read_holding_register(address)
+                    elif channel_type == "discrete":
+                        value = self.read_discrete_input(address)
+                    elif channel_type == "coil":
+                        value = self.read_coil(address)
+                    else:
+                        continue
+
+                    channel.notify_value_change(value)
 
     def _continuous_update(self) -> None:
         """Continuously update the state of the Modbus connection in a separate thread.
@@ -404,7 +469,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_input_state(address)
+            self._update_input_state(address)
         value = self.state["input"][address]
         log.debug(
             "Reading input register 0x%s Value: %s",
@@ -425,7 +490,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_input_state(address, width)
+            self._update_input_state(address, width)
         value = self.state["input"][address : address + width]
         log.debug(
             "Reading input registers from 0x%s - 0x%s Value: %s",
@@ -444,7 +509,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_holding_state(address)
+            self._update_holding_state(address)
         value = self.state["holding"][address]
         log.debug(
             "Reading holding register 0x%s Value: %s",
@@ -465,7 +530,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_holding_state(address, width)
+            self._update_holding_state(address, width)
         value = self.state["holding"][address : address + width]
         log.debug(
             "Reading holding registers from 0x%s - 0x%s Value: %s",
@@ -484,7 +549,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_discrete_state(address)
+            self._update_discrete_state(address)
         value = self.state["discrete"][address]
         log.debug("Reading discrete input %d Value: %s", address, value)
         return bool(value)
@@ -502,7 +567,7 @@ class ModbusConnection:
         """
         if update:
             log.debug("Updating discrete state from modbus")
-            self.update_discrete_state(address, width)
+            self._update_discrete_state(address, width)
         value = self.state["discrete"][address : address + width]
         log.debug(
             "Reading discrete inputs from 0x%s - 0x%s Value: %s",
@@ -521,7 +586,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_coil_state(address)
+            self._update_coil_state(address)
         value = self.state["coil"][address]
         log.debug("Reading coil 0x%s Value: %s", f"{address:04x}", value)
         return bool(value)
@@ -536,7 +601,7 @@ class ModbusConnection:
 
         """
         if update:
-            self.update_coil_state(address, width)
+            self._update_coil_state(address, width)
         value = self.state["coil"][address : address + width]
         log.debug(
             "Reading coils from 0x%s - 0x%s Value: %s",
@@ -557,7 +622,7 @@ class ModbusConnection:
         """
         log.debug("Writing coil 0x%s Value: %s", f"{address:04x}", value)
         self.modbus_tcp_client.write_coil(address, value)
-        self.update_coil_state()
+        self._update_coil_state()
 
     @auto_reconnect
     def write_coils(self, address: int, bits: Bits) -> None:
@@ -575,7 +640,7 @@ class ModbusConnection:
             bits.value_to_bin(),
         )
         self.modbus_tcp_client.write_coils(address, bits.value)
-        self.update_coil_state()
+        self._update_coil_state()
 
     @auto_reconnect
     def write_register(self, address: int, value: int) -> None:
@@ -593,7 +658,7 @@ class ModbusConnection:
             f"0b{value:016b}",
         )
         self.modbus_tcp_client.write_register(address, value)
-        self.update_holding_state()
+        self._update_holding_state()
 
     @auto_reconnect
     def write_registers(self, address: int, registers: Words) -> None:
@@ -612,7 +677,31 @@ class ModbusConnection:
             registers.value_to_bin(),
         )
         self.modbus_tcp_client.write_registers(address, registers.value)
-        self.update_holding_state()
+        self._update_holding_state()
+
+    def register_channel_callback(self, modbus_channel: "ModbusChannel", wago_channel: 'WagoChannel') -> None:
+        """Register a channel to be notified when a modbus address changes."""
+        channel_type = modbus_channel.channel_type
+        address = modbus_channel.address
+
+        if address not in self._channel_registry[channel_type]:
+            self._channel_registry[channel_type][address] = []
+
+        if wago_channel not in self._channel_registry[channel_type][address]:
+            self._channel_registry[channel_type][address].append(wago_channel)
+
+    def unregister_channel_callback(self, modbus_channel: "ModbusChannel", wago_channel: 'WagoChannel') -> None:
+        """Unregister a channel from being notified when a modbus address changes."""
+        channel_type = modbus_channel.channel_type
+        address = modbus_channel.address
+
+        if address in self._channel_registry[channel_type]:
+            if wago_channel in self._channel_registry[channel_type][address]:
+                self._channel_registry[channel_type][address].remove(wago_channel)
+
+                # Clean up empty entries
+                if not self._channel_registry[channel_type][address]:
+                    del self._channel_registry[channel_type][address]
 
 
 class ModbusChannel:

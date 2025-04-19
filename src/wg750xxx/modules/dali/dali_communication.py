@@ -159,7 +159,7 @@ class DaliCommunicationRegister:
         self.read_control_byte()
         self.read_status_byte()
 
-    def read_request(self) -> None:
+    def read_request(self) -> bool:
         """Check if the DALI master is requesting a read."""
         return self.status_byte.receive_request != self.control_byte.receive_accept
 

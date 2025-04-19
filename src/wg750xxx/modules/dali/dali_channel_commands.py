@@ -133,7 +133,7 @@ class DaliChannelCommands:
         self._send_command(0b00000100)
 
     # 5. Get current max value
-    def get_current_max_value(self) -> None:
+    def get_current_max_value(self) -> int:
         """Get current max value."""
         self._send_command(0b00000101)
         return self.dali_communication_register.read().dali_response

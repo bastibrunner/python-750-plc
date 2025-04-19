@@ -33,6 +33,8 @@ class DigitalIn(WagoChannel):
 
     def read(self) -> bool:
         """Read the state of the digital input channel."""
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         return self.modbus_channel.read()
 
     def write(self, value: Any) -> None:

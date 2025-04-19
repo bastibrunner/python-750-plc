@@ -4,7 +4,6 @@
 import logging
 from random import randint
 
-from tests.conftest import modbus_mock_with_modules
 from wg750xxx.hub import Hub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient

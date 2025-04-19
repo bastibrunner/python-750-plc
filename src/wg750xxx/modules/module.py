@@ -199,7 +199,7 @@ class WagoModule:
         self._modbus_address = value
         self._reset_modbus_channel_configuration()
         self.modbus_channels = ModbusChannel.create_channels(
-            self.spec.modbus_channels, self.modbus_address, self.modbus_connection
+            self.spec.modbus_channels, self._modbus_address, self.modbus_connection
         )
 
     @property

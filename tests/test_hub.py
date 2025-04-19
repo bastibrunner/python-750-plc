@@ -8,7 +8,6 @@ from pytest_subtests import SubTests
 
 
 from wg750xxx.hub import Hub
-from wg750xxx.modules.channel import WagoChannel
 from wg750xxx.modules.module import WagoModule
 logger = logging.getLogger(__name__)
 

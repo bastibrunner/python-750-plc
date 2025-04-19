@@ -1,7 +1,7 @@
 """Module for handling the channels of a Wago Module."""
 
 import logging
-from typing import Any, Literal
+from typing import Any, Literal, Callable
 
 from ..settings import ChannelConfig
 from ..modbus.state import ModbusChannel
@@ -51,6 +51,7 @@ class WagoChannel:
         modbus_channel: ModbusChannel | None = None,
         config: ChannelConfig | None = None,
         channel_index: int | None = None,
+        on_change_callback: Callable[[Any], None] | None = None,
     ) -> None:
         """Initialize the channel."""
         self.channel_type: Literal[WagoChannelType] = channel_type
@@ -69,6 +70,7 @@ class WagoChannel:
             icon=self.icon,
             value_template=self.value_template,
         )
+        self._on_change_callback: Callable[[Any], None] | None = on_change_callback
 
     def auto_generated_name(self) -> str:
         """Generate a name for the channel."""
@@ -126,3 +128,27 @@ class WagoChannel:
             )
         self.name = config.name
         self._config = config
+
+    @property
+    def on_change_callback(self) -> Callable[[Any], None] | None:
+        """Get the callback function that gets called when the channel value changes."""
+        return self._on_change_callback
+
+    @on_change_callback.setter
+    def on_change_callback(self, callback: Callable[[Any], None] | None) -> None:
+        """Set the callback function that gets called when the channel value changes."""
+        self._on_change_callback = callback
+
+        # If we have a modbus channel and a valid callback, register with ModbusConnection
+        if self.modbus_channel is not None and callback is not None:
+            if hasattr(self.modbus_channel, 'modbus_connection') and hasattr(self.modbus_channel.modbus_connection, 'register_channel_callback'):
+                self.modbus_channel.modbus_connection.register_channel_callback(self.modbus_channel, self)
+        elif self.modbus_channel is not None and callback is None:
+            # Unregister if callback is set to None
+            if hasattr(self.modbus_channel, 'modbus_connection') and hasattr(self.modbus_channel.modbus_connection, 'unregister_channel_callback'):
+                self.modbus_channel.modbus_connection.unregister_channel_callback(self.modbus_channel, self)
+
+    def notify_value_change(self, new_value: Any) -> None:
+        """Notify the channel that its value has changed."""
+        if self._on_change_callback is not None:
+            self._on_change_callback(new_value)

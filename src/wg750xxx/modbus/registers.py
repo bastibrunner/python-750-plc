@@ -38,6 +38,10 @@ class Words:
             self._words = self._words[:size]
         self.width: int = self._words.size
 
+    def copy(self) -> Self:
+        """Copy the word register."""
+        return Words(self._words.copy())
+
     def __str__(self) -> str:
         """Get the string representation of the word register."""
         return self.value_to_hex()
@@ -174,6 +178,10 @@ class Bits:
             self._bits = self._bits[:size]
         self.width: int = len(self._bits)
 
+    def copy(self) -> Self:
+        """Copy the bit register."""
+        return Bits(self._bits.copy())
+
     def __str__(self) -> str:
         """Get the string representation of the bit register."""
         return "".join([f"{b}" for b in self._bits])
@@ -216,7 +224,7 @@ class Bits:
             [f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bits if b != 0]
         ).rstrip("\x00")
 
-    def __getitem__(self, index: slice | int) -> Self | bool:
+    def __getitem__(self, index: slice | int) -> Self | list[Self]| bool:
         """Get the bit register content at a specific index or slice."""
         if isinstance(index, slice):
             return Bits(self._bits[index])
