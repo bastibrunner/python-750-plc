@@ -6,37 +6,204 @@ from typing import Self
 
 import numpy as np
 
+class Bytes:
+    """A class to represent a Modbus byte (8-bit) register of any length.
+
+    Args:
+        value:  The value to initialize the byte register with. Can be a
+                list of integers, a numpy array of integers, an integer or None.
+                Integer values higher than 255 will be split into multiple bytes.
+                If the value is None, the byte register will be initialized to an
+                empty array with the size provided.
+        size:   The size of the byte register. If not provided, the size will be
+                the size of the value. If the size is greater than the size of the
+                value, the byte register will be padded with zeros. If the size is
+                less than the size of the value, the byte register will be truncated.
+    """
+
+    def __init__(self, value: list[int] | np.ndarray[tuple[int, ...], np.dtype[np.uint8]] | int | None = None, size: int = 0) -> None:
+        """Initialize the Bytes class."""
+        if value is None:
+            self._bytes = np.array([], dtype=np.uint8)
+        elif isinstance(value, np.ndarray):
+            self._bytes = value
+        elif isinstance(value, int):
+            self._bytes = self._from_int(value)
+        else:
+            self._bytes = np.array(value, dtype=np.uint8)
+        if size == 0:
+            size = self._bytes.size
+        # padding with zeros if width is greater than the number of bytes given
+        if size > self._bytes.size:
+            self._bytes = np.pad(
+                self._bytes,
+                (0, size - len(self._bytes)),
+                mode="constant",
+                constant_values=0,
+            )
+        elif size < self._bytes.size:
+            self._bytes = self._bytes[:size]
+        self.width: int = self._bytes.size
+
+    def _from_int(self, value: int, byteorder: str = "little") -> "Bytes":
+        """Convert an integer to a byte register."""
+        if value < 256:
+            return np.array([value], dtype=np.uint8)
+        else:
+            # split the integer into bytes
+            values = np.array([], dtype=np.uint8)
+            if byteorder == "big":
+                while value > 0:
+                    values = np.insert(values, 0, value & 0xFF)
+                    value >>= 8
+            else:
+                while value > 0:
+                    values = np.append(values, value & 0xFF)
+                    value >>= 8
+            return values
+
+    def __len__(self) -> int:
+        """Get the length of the byte register."""
+        return len(self._bytes)
+
+    @property
+    def value(self) -> list[int]:
+        """Get the content of the byte register."""
+        return self._bytes.tolist()
+
+    @value.setter
+    def value(self, value: list[int]) -> None:
+        if len(value) != self._bytes.size:
+            raise ValueError(f"Invalid value length, register has {self._bytes.size} bytes, got {len(value)}")
+        self._bytes[...] = np.array(value, dtype=np.uint8)
+
+    def __str__(self) -> str:
+        """Get the string representation of the byte register."""
+        return self.value_to_hex()
+
+    def __repr__(self) -> str:
+        """Get the string representation of the byte register."""
+        return f"{self._bytes}"
+
+    def copy(self) -> "Bytes":
+        """Copy the byte register."""
+        return Bytes(self._bytes.copy())
+
+    def value_to_hex(self) -> str:
+        """Get the byte register content as hexadecimal string representation."""
+        return "".join([f"{b:02X}" for b in self._bytes])
+
+    def value_to_bin(self) -> str:
+        """Get the byte register content as binary string representation."""
+        return "".join([f"{b:08b}" for b in self._bytes])
+
+    def value_to_int(self, byteorder: str = "little") -> int:
+        """Get the byte register content as integer representation."""
+        return int.from_bytes(self._bytes, byteorder=byteorder)
+
+    def __int__(self) -> int:
+        """Get the byte register content as integer representation."""
+        return self.value_to_int()
+
+    def value_to_float(self) -> float:
+        """Get the byte register content as float representation."""
+        return float(self.value_to_int())
+
+    def value_to_string(self) -> str:
+        """Get the byte register content as string representation."""
+        return "".join([f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bytes if b != 0]
+        ).rstrip("\x00")
+
+    def __getitem__(self, index: slice | int) -> "Bytes":
+        """Get the byte register content at a specific index or slice."""
+        if isinstance(index, slice):
+            return Bytes(self._bytes[index])
+        if isinstance(index, int):
+            return Bytes([self._bytes[index]])
+        raise ValueError(f"Invalid index type: {type(index)}")
+
+    def __setitem__(self, index: int | slice | EllipsisType, value: int | list[int]) -> None:
+        """Set the byte register content at a specific index or slice."""
+        if isinstance(index, EllipsisType):
+            self._bytes[...] = np.array(value, dtype=np.uint8)
+        else:
+            self._bytes[index] = value
+
+    def __eq__(self, other) -> bool:
+        """Check if the byte register is equal to another byte register."""
+        if not isinstance(other, Bytes):
+            return False
+        if self.width != other.width:
+            return False
+        return np.array_equal(self._bytes, other.value)
+
+    def __ne__(self, other) -> bool:
+        """Check if the byte register is not equal to another byte register."""
+        return not self.__eq__(other)
+
+    def __iter__(self) -> Iterator[int]:
+        """Get the iterator of the byte register."""
+        return iter(self._bytes)
+
+    def __next__(self) -> int:
+        """Get the next byte in the byte register."""
+        return int(next(iter(self._bytes)))
+
 
 class Words:
-    """A class to represent a Modbus word (16-bit) register of any length."""
+    """A class to represent a Modbus word (16-bit) register of any length.
+
+    Args:
+        value:  The value to initialize the word register with. Can be a
+                list of integers, a numpy array of integers, an integer or None.
+                Integer values higher than 65535 will be split into multiple words.
+                If the value is None, the word register will be initialized to an
+                empty array with the size provided.
+        size:   The size of the word register. If not provided, the size will be
+                the size of the value. If the size is greater than the size of the
+                value, the word register will be padded with zeros. If the size is
+                less than the size of the value, the word register will be truncated.
+    """
 
     def __init__(
         self,
-        words: list[int]
-        | np.ndarray[tuple[int, ...], np.dtype[np.uint16]]
-        | None = None,
+        value: list[int] | np.ndarray[tuple[int, ...], np.dtype[np.uint16]] | int | None = None,
         size: int = 0,
     ) -> None:
         """Initialize the Words class."""
-        if words is None:
+        if value is None:
             self._words = np.array([], dtype=np.uint16)
-        elif isinstance(words, np.ndarray):
-            self._words = words
+        elif isinstance(value, np.ndarray):
+            self._words = value
+        elif isinstance(value, int):
+            self._words = self._from_int(value)
         else:
-            self._words = np.array(words, dtype=np.uint16)
+            self._words = np.array(value, dtype=np.uint16)
         if size == 0:
-            size = self._words.size
+            size = len(self._words)
         # padding with zeros if width is greater than the number of words given
-        if size > self._words.size:
+        if size > len(self._words):
             self._words = np.pad(
                 self._words,
                 (0, size - len(self._words)),
                 mode="constant",
                 constant_values=0,
             )
-        elif size < self._words.size:
+        elif size < len(self._words):
             self._words = self._words[:size]
-        self.width: int = self._words.size
+        self.width: int = len(self._words)
+
+    def _from_int(self, value: int) -> "Words":
+        """Convert an integer to a word register."""
+        if value < 65536:
+            return Words(np.array([value], dtype=np.uint16))
+        else:
+            # split the integer into bytes
+            values = np.array([], dtype=np.uint16)
+            while value > 0:
+                values = np.insert(values, 0, value & 0xFFFF)
+                value >>= 16
+            return Words(values)
 
     def copy(self) -> "Words":
         """Copy the word register."""
@@ -57,6 +224,8 @@ class Words:
 
     @value.setter
     def value(self, value: list[int]) -> None:
+        if len(value) != self._words.size:
+            raise ValueError(f"Invalid value length, register has {self._words.size} words, got {len(value)}")
         self._words[...] = np.array(value, dtype=np.uint16)
 
     # def value(self, value: list[int], start: int = 0):
@@ -73,8 +242,26 @@ class Words:
     def value_to_int(self) -> int:
         """Get the word register content as integer representation."""
         if self._words.size > 1:
-            return int(sum((int(b) << (16 * i) for i, b in enumerate(self._words)), 0))
+            return self.to_bytes("little").value_to_int("big")
         return int(self._words[0])
+
+    def to_bytes(self, byteorder: str = "little") -> Bytes:
+        """Convert the word register to a byte register."""
+        byte_list = []
+        if byteorder == "big":
+            words = reversed(self._words)
+        else:
+            words = self._words
+        for word in words:
+            high_byte = (word >> 8) & 0xFF
+            low_byte = word & 0xFF
+            if byteorder == "big":
+                byte_list.append(low_byte)
+                byte_list.append(high_byte)
+            else:
+                byte_list.append(high_byte)
+                byte_list.append(low_byte)
+        return Bytes(byte_list)
 
     def __int__(self) -> int:
         """Get the word register content as integer representation."""

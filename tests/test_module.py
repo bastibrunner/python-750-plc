@@ -5,7 +5,9 @@
 from typing import List, Generator
 
 import pytest
+from pytest_socket import enable_socket, socket_allow_hosts
 from wg750xxx.hub import Hub
+from wg750xxx.modules.spec import IOType
 from wg750xxx.settings import HubConfig
 from wg750xxx.modules.module import ModuleConfig
 
@@ -13,6 +15,8 @@ from wg750xxx.modules.module import ModuleConfig
 @pytest.fixture(scope="module")
 def hub() -> Generator[Hub, None, None]:
     """Create a Hub instance for testing."""
+    enable_socket()
+    socket_allow_hosts(["10.22.22.16", "localhost", "::1"], allow_unix_socket=True)
     try:
         hub_instance = Hub(HubConfig(host="10.22.22.16", port=502), True)
         yield hub_instance
@@ -63,18 +67,23 @@ def test_read_register(hub: Hub) -> None:
     _coils = register.bits
 
 
-def test_module_count_analog(hub: Hub) -> None:
-    """Test counting analog modules."""
-    assert len(hub.get_digital_modules()) == 36, (
-        f"Error: expected 12 digital modules, got {len(hub.get_digital_modules())}"
+def test_module_count(hub: Hub) -> None:
+    """Test counting analog input modules."""
+    modules = hub.modules.get(io_type=IOType(input=True))
+    assert len(modules) == 5, (
+        f"Error: expected 5 analog input modules, got {len(modules)}"
     )
-
-
-
-def test_module_count_digital(hub: Hub) -> None:
-    """Test counting digital modules."""
-    assert len(hub.get_analog_modules()) == 11, (
-        f"Error: expected 11 analog modules, got {len(hub.get_analog_modules())}"
+    modules = hub.modules.get(io_type=IOType(output=True))
+    assert len(modules) == 1, (
+        f"Error: expected 1 analog output modules, got {len(modules)}"
+    )
+    modules = hub.modules.get(io_type=IOType(digital=True,input=True))
+    assert len(modules) == 19, (
+        f"Error: expected 19 digital input modules, got {len(modules)}"
+    )
+    modules = hub.modules.get(io_type=IOType(digital=True,output=True))
+    assert len(modules) == 17, (
+        f"Error: expected 17 digital output modules, got {len(modules)}"
     )
 
 
@@ -91,7 +100,7 @@ def test_module_digital_input_bits_match(hub: Hub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
         module.spec.modbus_channels["discrete"]
-        for module in hub.get_digital_modules()
+        for module in hub.modules.get(io_type=IOType(digital=True,input=True))
         if module.spec.io_type.input
     )
     assert digital_input_bits == 146, (
@@ -104,7 +113,7 @@ def test_module_digital_output_bits_match(hub: Hub) -> None:
     """Test matching digital output bits."""
     digital_outputs_bits = sum(
         module.spec.modbus_channels["coil"]
-        for module in hub.get_digital_modules()
+        for module in hub.modules.get(io_type=IOType(digital=True,output=True))
         if module.spec.io_type.output
     )
     assert digital_outputs_bits == 80, (
@@ -118,7 +127,7 @@ def test_module_analog_input_bits_match(hub: Hub) -> None:
     analog_inputs_bits = (
         sum(
             module.spec.modbus_channels["input"]
-            for module in hub.get_analog_modules()
+            for module in hub.modules.get(io_type=IOType(input=True))
             if module.spec.io_type.input
         )
         * 16
@@ -134,13 +143,13 @@ def test_module_analog_output_bits_match(hub: Hub) -> None:
     analog_outputs_bits = (
         sum(
             module.spec.modbus_channels["holding"]
-            for module in hub.get_analog_modules()
+            for module in hub.modules.get(io_type=IOType(output=True))
             if module.spec.io_type.output
         )
         * 16
     )
-    assert analog_outputs_bits == 256, (
-        f"Error: expected 256 analog output bits, got {analog_outputs_bits}"
+    assert analog_outputs_bits == 64, (
+        f"Error: expected 64 analog output bits, got {analog_outputs_bits}"
     )
 
 
@@ -156,30 +165,75 @@ def test_channel_count_match_all_modules(hub: Hub) -> None:
             f"Error: expected {channels_spec} channels, got {channels_actual}"
         )
 
-
+def test_module_counter_count(hub: Hub) -> None:
+    """Test counter count."""
+    modules = hub.modules.get(module="404")
+    assert len(modules) == 3, (
+        f"Error: expected 3 counter modules, got {len(modules)}"
+    )
+    for module in modules:
+        assert module.channels[0].channel_type == "Counter 32Bit", (
+            f"Error: expected Counter 32Bit channel, got {module.channels[0].channel_type}"
+        )
+        value = module.channels[0].read()
+        assert isinstance(value, int)
 
 @pytest.mark.parametrize(
     "module_idx,modbus_channel_type",
     [
-        (352, "discrete"),
-        (559, "holding"),
-        (33794, "coil"),
-        (36866, "coil"),
-        (36865, "discrete"),
-        (33793, "discrete"),
-        (459, "input"),
-        (453, "input"),
-        (460, "input"),
-        (451, "input"),
-        (404, "input"),
-        (33281, "discrete"),
+        (1, "Int16 Out"),
+        (2, "Digital Out"),
+        (3, "Digital Out"),
+        (4, "Digital Out"),
+        (5, "Digital Out"),
+        (6, "Digital Out"),
+        (7, "Digital Out"),
+        (8, "Digital Out"),
+        (9, "Digital Out"),
+        (10, "Digital Out"),
+        (11, "Digital Out"),
+        (12, "Digital Out"),
+        (13, "Digital Out"),
+        (14, "Digital Out"),
+        (15, "Digital Out"),
+        (16, "Digital Out"),
+        (17, "Digital Out"),
+        (18, "Digital Out"),
+        (19, "Digital In"),
+        (20, "Digital In"),
+        (21, "Digital In"),
+        (22, "Digital In"),
+        (23, "Digital In"),
+        (24, "Digital In"),
+        (25, "Digital In"),
+        (26, "Digital In"),
+        (27, "Digital In"),
+        (28, "Digital In"),
+        (29, "Digital In"),
+        (30, "Digital In"),
+        (31, "Digital In"),
+        (32, "Digital In"),
+        (33, "Int16 In"),
+        (34, "Int16 In"),
+        (35, "Int16 In"),
+        (36, "Int16 In"),
+        (37, "Int16 In"),
+        (38, "Counter 32Bit"),
+        (39, "Counter 32Bit"),
+        (40, "Counter 32Bit"),
+        (41, "Digital In"),
+        (42, "Digital In"),
+        (43, "Digital In"),
+        (44, "Digital In"),
+        (45, "Digital In"),
+        (46, "Dali")
     ],
 )
 def test_module_channel_type(
     hub: Hub, module_idx: int, modbus_channel_type: str
 ) -> None:
     """Test module channel types."""
-    for channel in hub.modules[module_idx].modbus_channels[modbus_channel_type]:
+    for channel in hub.modules[module_idx].channels:
         assert channel.channel_type == modbus_channel_type, (
             f"Error: expected {modbus_channel_type} channel, got {channel.channel_type}"
         )
@@ -189,18 +243,15 @@ def test_module_channel_type(
 @pytest.mark.parametrize(
     "module_idx,modbus_channel_type,start_address",
     [
-        (352, "discrete", 0x0000),
-        (559, "holding", 0x0200),
-        (33794, "coil", 0x0200),
-        (36866, "coil", 0x0200),
-        (36865, "discrete", 0x0000),
-        (33793, "discrete", 0x0000),
-        (459, "input", 0x0000),
-        (453, "input", 0x0000),
-        (460, "input", 0x0000),
-        (451, "input", 0x0000),
-        (404, "input", 0x0000),
-        (33281, "discrete", 0x0000),
+        (1, "holding", 0x0000),
+        (2, "coil", 0x0000),
+        (3, "coil", 0x0004),
+        (4, "coil", 0x0008),
+        (5, "coil", 0x000C),
+        (6, "coil", 0x0010),
+        (7, "coil", 0x0014),
+        (8, "coil", 0x0018),
+        (9, "coil", 0x001C),
     ],
 )
 def test_module_addresses(

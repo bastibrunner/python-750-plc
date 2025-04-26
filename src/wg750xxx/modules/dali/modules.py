@@ -1,15 +1,20 @@
 """Dali module."""
 
 from collections.abc import Iterator
-from typing import ClassVar, cast
+import time
+from typing import ClassVar, cast, Any, Callable
 
 from homeassistant.core import logging
 
 from ..module import WagoModule
+from ..exceptions import WagoModuleError
 from ..spec import IOType, ModbusChannelSpec, ModuleSpec
 from .channels import DaliChannel
 from .module_setup import ModuleSetup
+from .module_status import ModuleStatus
+from .module_commands import ModuleCommands
 from .dali_communication import DaliCommunicationRegister
+from .exceptions import DaliError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +41,8 @@ class Wg750DaliMaster(WagoModule):
 
         """
         super().__init__(*args, **kwargs)
+        if self.modbus_address is None:
+            raise WagoModuleError("Modbus address not set")
         self.dali_communication_register: DaliCommunicationRegister = (
             DaliCommunicationRegister(self.modbus_connection, self.modbus_address)
         )
@@ -48,6 +55,10 @@ class Wg750DaliMaster(WagoModule):
                 for address in range(0x40, 0x50)
             ]
             self.all: DaliChannel = DaliChannel(0x3F, self.dali_communication_register)
+
+        self.setup: ModuleSetup = ModuleSetup(self.dali_communication_register)
+        self.status: ModuleStatus = ModuleStatus(self.dali_communication_register)
+        self.commands: ModuleCommands = ModuleCommands(self.dali_communication_register)
 
     def __getitem__(self, key: int) -> DaliChannel | None:
         """Get a DALI channel by index."""
@@ -66,14 +77,6 @@ class Wg750DaliMaster(WagoModule):
         if self.channels is None:
             return iter([])
         return iter(cast(list[DaliChannel], self.channels))
-
-    def _read_status_byte(self) -> int:
-        """Read the status byte of the DALI message."""
-        return self.modbus_channels["input"][0].read_lsb()
-
-    def _write_control_byte(self, value: int) -> None:
-        """Write the control byte of the DALI message."""
-        self.modbus_channels["holding"][0].write_lsb(value)
 
     def create_channels(self) -> None:
         """Create the channels of the DALI master."""
@@ -94,3 +97,45 @@ class Wg750DaliMaster(WagoModule):
                     dali_communication_register=self.dali_communication_register,
                 )
             )
+
+    @property
+    def on_change_callback(self) -> Callable[[Any], None] | None:
+        """Get the callback function that gets called when the channel value changes."""
+        return self._on_change_callback
+
+    @on_change_callback.setter
+    def on_change_callback(self, callback: Callable[[Any], None] | None) -> None:
+        """Set the callback function that gets called when the channel value changes."""
+        self._on_change_callback = callback
+
+        # If we have a modbus channel and a valid callback, register with ModbusConnection
+        if len(self.modbus_channels["input"]) > 0 and callback is not None:
+            if hasattr(self.modbus_connection, 'register_channel_callback'):
+                for channel in self.modbus_channels["input"]:
+                    self.modbus_connection.register_channel_callback(channel, self)
+        elif len(self.modbus_channels["input"]) > 0 and callback is None:
+            # Unregister if callback is set to None
+            if hasattr(self.modbus_connection, 'unregister_channel_callback'):
+                for channel in self.modbus_channels["input"]:
+                    self.modbus_connection.unregister_channel_callback(channel, self)
+
+    def notify_value_change(self, new_value: Any) -> None:
+        """Notify the channel that its value has changed."""
+        self.dali_communication_register.read_status_byte()
+        self.dali_communication_register.read_control_byte()
+
+        if self.dali_communication_register.read_request():  # TODO: This is a hack to find out why the DALI master is requesting a read.
+            data = self.dali_communication_register.read()
+            _LOGGER.warning(
+                "DALI master is requesting an unexpected read before write: %s", data
+            )
+            raise DaliError("DALI master is requesting an unexpected read.")
+
+        if self._on_change_callback is None:
+            return
+        if self._on_change_callback.__code__.co_argcount == 1:
+            self._on_change_callback(new_value)
+        elif self._on_change_callback.__code__.co_argcount == 2:
+            self._on_change_callback(new_value, self)
+        else:
+            raise ValueError(f"Callback function {self._on_change_callback.__name__} has {self._on_change_callback.__code__.co_argcount} arguments, expected 1 or 2")

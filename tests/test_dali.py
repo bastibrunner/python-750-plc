@@ -115,10 +115,10 @@ def test_dali_command_query_short_address_present(
 ) -> None:
     """Test the query short address present command."""
     dali_modbus_mock.initialize_state()
-    dali_hub.connection.update_state()
+    dali_hub.connection.update_state() # type: ignore
     command: ModuleSetup = ModuleSetup(
         cast(
-            Wg750DaliMaster, dali_hub.modules["641"][0]
+            Wg750DaliMaster, dali_hub.modules["641"][0] # type: ignore
         ).dali_communication_register
     )
     result: List[int] = command.query_short_address_present()

@@ -5,7 +5,6 @@ from typing import Any
 
 from .dali_communication import (
     DaliCommunicationRegister,
-    DaliInputMessage,
     DaliOutputMessage,
 )
 from ..exceptions import WagoModuleError
@@ -85,7 +84,7 @@ class DaliChannelBase:
             timeout=timeout,
         )
 
-    def _read_command(self, command_code: int) -> DaliInputMessage | None:
+    def _read_command(self, command_code: int) -> int:
         """Read a command from the DALI channel."""
         r = self.dali_communication_register.write(
             DaliOutputMessage(

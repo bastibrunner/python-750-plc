@@ -74,6 +74,8 @@ class Int8In(WagoChannel):
 
     def read(self) -> int:
         """Read the value of the channel."""
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         return (
             self.modbus_channel.read_lsb()
             if self.byte_position == "LSB"

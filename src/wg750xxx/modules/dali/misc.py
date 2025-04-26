@@ -25,7 +25,7 @@ def dali_response_to_channel_list(
     response: DaliInputMessage | None, offset: int = 0
 ) -> list[int]:
     """Convert DALI response to channel list."""
-    channels = []
+    channels: list[int] = []
     if response is None:
         return channels
     channels.extend(

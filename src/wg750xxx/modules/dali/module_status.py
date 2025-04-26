@@ -4,30 +4,17 @@
 import logging
 
 from .dali_communication import (
-    DaliCommunicationRegister,
     DaliInputMessage,
     DaliOutputMessage,
 )
 from .misc import dali_response_to_channel_list
+from .module_base import ModuleBase
 
 log = logging.getLogger(__name__)
 
 
-class ModuleStatus:
+class ModuleStatus(ModuleBase):
     """DALI status."""
-
-    def __init__(self, dali_communication_register: DaliCommunicationRegister) -> None:
-        """Initialize the DALI status.
-
-        Args:
-            dali_communication_register: DaliCommunicationRegister: The DALI communication register.
-
-        """
-        log.debug("Initializing DaliCommands %s", id(self))
-        self.dali_communication_register: DaliCommunicationRegister = (
-            dali_communication_register
-        )
-        self.dali_communication_register.read()
 
     # 8. Abfrage Status Vorschaltgerät [0-31]
     # 9. Abfrage Status Vorschaltgerät [32-63]
@@ -105,14 +92,14 @@ class ModuleStatus:
         )
 
     # 23. Abfragen der Hard- und Softwareversion
-    def query_hard_and_software_version(self) -> DaliInputMessage:
+    def query_hard_and_software_version(self) -> DaliInputMessage | None:
         """Query hard and software version."""
         return self.dali_communication_register.write(
             DaliOutputMessage(command_extension=0x17), response=True
         )
 
     # 36. Schnellabfragen des Netzwerk-Status
-    def query_network_status(self) -> DaliInputMessage:
+    def query_network_status(self) -> DaliInputMessage | None:
         """Query network status."""
         return self.dali_communication_register.write(
             DaliOutputMessage(command_extension=0x36), response=True

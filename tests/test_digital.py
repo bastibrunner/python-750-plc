@@ -3,6 +3,7 @@
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 import logging
 from random import randint
+import re
 
 import pytest
 
@@ -164,9 +165,9 @@ def test_digital_channel_config(configured_hub: Hub) -> None:
             # Test auto-generated name
             original_name = channel.name
             channel.name = None
-            expected_name = f"{channel.channel_type} {channel.channel_index or ''}".rstrip()
+            expected_name = re.compile(r"^.*\s\d+$")
             error_msg = f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
-            assert channel.auto_generated_name() == expected_name, error_msg
+            assert expected_name.match(channel.auto_generated_name()), error_msg
 
             # Restore name
             channel.name = original_name

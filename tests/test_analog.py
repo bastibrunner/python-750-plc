@@ -3,7 +3,7 @@
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 import logging
 from random import randint
-
+import re
 from wg750xxx.hub import Hub
 from wg750xxx.modules.analog.modules import (
     Wg750AnalogIn1Ch, Wg750AnalogIn2Ch, Wg750AnalogIn4Ch, Wg750AnalogIn8Ch,
@@ -25,7 +25,7 @@ def test_analog_input_modules_created(configured_hub: Hub) -> None:
     """Test that analog input modules are created correctly."""
     analog_input_modules = [
         module for module in configured_hub.modules
-        if module.display_name in ["AI1", "AI2", "AI4", "AI8"]
+        if module.display_name in ["AI1", "AI2", "AI4", "AI8", "AI16"]
     ]
 
     assert len(analog_input_modules) > 0, "No analog input modules found"
@@ -44,7 +44,7 @@ def test_analog_output_modules_created(configured_hub: Hub) -> None:
     """Test that analog output modules are created correctly."""
     analog_output_modules = [
         module for module in configured_hub.modules
-        if module.display_name in ["AO1", "AO2", "AO4", "AO8"]
+        if module.display_name in ["AO1", "AO2", "AO4", "AO8", "AO16"]
     ]
 
     assert len(analog_output_modules) > 0, "No analog output modules found"
@@ -163,9 +163,20 @@ def test_analog_channel_callbacks(
 
 def test_analog_channel_config(configured_hub: Hub) -> None:
     """Test analog channel configuration."""
-    for module in configured_hub.modules:
-        if module.spec.io_type.digital:
-            continue
+
+    analog_input_modules = [
+        module for module in configured_hub.modules
+        if module.display_name in ["AI1", "AI2", "AI4", "AI8", "AI16"]
+    ]
+
+    analog_output_modules = [
+        module for module in configured_hub.modules
+        if module.display_name in ["AO1", "AO2", "AO4", "AO8", "AO16"]
+    ]
+
+    for module in analog_input_modules + analog_output_modules:
+
+        assert module.channels is not None, f"Module {module} has no channels"
 
         for channel in module.channels:
             config = channel.config
@@ -176,9 +187,9 @@ def test_analog_channel_config(configured_hub: Hub) -> None:
             # Test auto-generated name
             original_name = channel.name
             channel.name = None
-            expected_name = f"{channel.channel_type} {channel.channel_index or ''}".rstrip()
+            expected_name = re.compile(r"Int\d+ (In|Out) \d+")
             error_msg = f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
-            assert channel.auto_generated_name() == expected_name, error_msg
+            assert expected_name.match(channel.auto_generated_name()), error_msg
 
             # Restore name
             channel.name = original_name

@@ -1,36 +1,11 @@
 """Dali commands."""
 
 # pylint: disable=unused-variable,too-many-public-methods
-from typing import Any
 
 from .channel_base import DaliChannelBase
 
-from .dali_communication import (
-    DaliCommunicationRegister,
-)
-
 class DaliChannelStatus(DaliChannelBase):
     """DALI commands."""
-
-    def __init__(
-        self,
-        dali_address: int,
-        dali_communication_register: DaliCommunicationRegister,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize the DALI channel commands.
-
-        Args:
-            dali_address: int: The DALI address.
-            dali_communication_register: DaliCommunicationRegister: The DALI communication register.
-            **kwargs: Any: The keyword arguments.
-
-        """
-        self.dali_communication_register: DaliCommunicationRegister = (
-            dali_communication_register
-        )
-        self._dali_address: int = dali_address
-        super().__init__(**kwargs)
 
     # 144. Get status
     def get_status(self) -> int:

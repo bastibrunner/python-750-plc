@@ -7,21 +7,8 @@ from .dali_communication import (
 )
 from .channel_base import DaliChannelBase
 from .misc import check_value_range
-
 class DaliChannelCommands(DaliChannelBase):
     """DALI commands."""
-
-    @property
-    def brightness(self) -> int:
-        """Get the brightness value."""
-        return self._get_current_value()
-
-    @brightness.setter
-    def brightness(self, value: int) -> None:
-        """Set the brightness value."""
-        self._set_brightness(value)
-
-
     # Dali Commands DIN IEC 60929
 
     # 0. Power off
@@ -66,12 +53,13 @@ class DaliChannelCommands(DaliChannelBase):
         self._send_command(0b00010000 + scene)
 
     # 160. Get current value
-    def _get_current_value(self) -> int:
+    def get_current_value(self) -> int:
         """Get current value."""
-        return self._read_command(0b10100000)
+        r = self._read_command(0b10100000)
+        return r
 
     # 999. WAGO specific: Direct brightness control
-    def _set_brightness(self, brightness: int) -> None:
+    def set_brightness(self, brightness: int) -> None:
         """Set brightness."""
         check_value_range(brightness, 0, 254, "brightness")
         self.dali_communication_register.write(

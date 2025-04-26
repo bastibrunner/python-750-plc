@@ -49,6 +49,7 @@ class WagoModule:
         module_identifier: ModuleIdentifier,
         modbus_address: AddressDict,
         modbus_connection: ModbusConnection,
+        update_interval: int | None = None,
         config: ModuleConfig | None = None,
     ) -> Self:
         """Create a new WagoModule using the factory pattern.
@@ -62,7 +63,7 @@ class WagoModule:
             module_identifier: ModuleIdentifier: The identifier of the module.
             modbus_address: AddressDict: The modbus address of the module.
             config: ModuleConfig | None: The configuration of the module.
-
+            update_interval: int | None: The update interval of the module.
         Returns:
             WagoModule: The created WagoModule.
 
@@ -79,6 +80,7 @@ class WagoModule:
                     module_identifier=module_identifier,
                     modbus_address=modbus_address,
                     config=config,
+                    update_interval=update_interval,
                 )
         raise NotImplementedError(
             f"Subclass for Module type {module_identifier} not found"
@@ -92,6 +94,7 @@ class WagoModule:
         module_identifier: ModuleIdentifier | None = None,
         config: ModuleConfig | None = None,
         auto_create_channels: bool = True,
+        update_interval: int | None = None,
     ) -> None:
         """Initialize the WagoModule.
 
@@ -118,7 +121,8 @@ class WagoModule:
         self._modbus_address: AddressDict | None = None
         self._display_name: str | None = None
         self._channel_init_config: list[ChannelConfig] | None = None
-        self.polling_interval: int = 0
+        self._config: ModuleConfig | None = None
+        self.update_interval: int = update_interval or 100
         log.debug("Initializing module %s", self.__repr__())
 
         if module_identifier is not None:
@@ -225,7 +229,7 @@ class WagoModule:
                 index=self.index,
                 type=self.spec.module_type,
                 name=self.display_name or self.spec.module_type,
-                polling_interval=self.polling_interval,
+                update_interval=self.update_interval,
                 channels=[channel.config for channel in self.channels] if self.channels is not None else None
             )
         else:
@@ -250,8 +254,9 @@ class WagoModule:
                     f"Module type {config.type} does not match {self.spec.module_type}"
                 )
             self._display_name = config.name or self.display_name
-            self.index = config.index
-            self._channel_init_config = config.channels
+            self.index = config.index or self.index
+            self.update_interval = config.update_interval or self.update_interval
+            self._channel_init_config = config.channels or self._channel_init_config
             self._config = config
         else:
             self._config = self.config
@@ -276,7 +281,8 @@ class WagoModule:
     def append_channel(self, channel: WagoChannel) -> None:
         """Append a channel to the module."""
         # Channel index is the index of the current array position
-        channel.channel_index = len(self.channels)
+        channel.channel_index = len(self.channels or [])
+        channel.module_id = self.config.id
         if self._channel_init_config is not None:
             if channel.channel_index < len(self._channel_init_config):
                 if (
@@ -287,16 +293,16 @@ class WagoModule:
                         f"""Channel type {self._channel_init_config[channel.channel_index].type} reported from
                         hub does not match channel type {channel.channel_type} specified in config"""
                     )
+                channel.config = self._channel_init_config[channel.channel_index]
                 channel.name = self._channel_init_config[channel.channel_index].name
-            elif channel.channel_index > len(self._channel_init_config):
+                channel.update_interval = self._channel_init_config[channel.channel_index].update_interval or self.update_interval
+            else:
                 log.warning(
                     "More channels found (%d) in module %s than configured in config (%d). Check module configuration and update config.",
                     channel.channel_index + 1,
                     self.display_name,
                     len(self._channel_init_config),
                 )
-            else:
-                channel.config = self._channel_init_config[channel.channel_index]
         self.channels.append(channel.get_instance())
 
     def _reset_modbus_channel_configuration(self) -> None:

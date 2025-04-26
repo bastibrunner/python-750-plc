@@ -3,8 +3,11 @@
 
 from typing import Any
 
+from wg750xxx.modules.dali.channel_setup import DaliChannelSetup
+
 from ..channel import WagoChannel
 from .channel_commands import DaliChannelCommands
+from .channel_status import DaliChannelStatus
 from .dali_communication import DaliCommunicationRegister
 
 
@@ -42,6 +45,19 @@ class DaliChannel(DaliChannelCommands, WagoChannel):
             channel_type=self.channel_type,
             **kwargs,
         )
+        self.status: DaliChannelStatus = DaliChannelStatus(self.dali_address, self.dali_communication_register)
+        self.setup: DaliChannelSetup = DaliChannelSetup(self.dali_address, self.dali_communication_register)
+        self.commands: DaliChannelCommands = DaliChannelCommands(self.dali_address, self.dali_communication_register)
+
+    @property
+    def brightness(self) -> int:
+        """Get the brightness value."""
+        return self.commands.get_current_value()
+
+    @brightness.setter
+    def brightness(self, value: int) -> None:
+        """Set the brightness value."""
+        self.commands.set_brightness(value)
 
     def read(self, update: bool = False) -> int:
         """Read the brightness value of the Dali channel."""

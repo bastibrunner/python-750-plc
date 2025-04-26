@@ -15,7 +15,7 @@ from .modbus.state import AddressDict, ModbusChannelSpec, ModbusConnection
 from .modules.module import WagoModule
 from .modules.spec import IOType
 from .modbus.registers import Register, test_constants
-from .settings import HubConfig, ModbusSettings
+from .settings import HubConfig, ModuleConfig
 
 log = logging.getLogger(__name__)
 
@@ -50,13 +50,17 @@ class Modules:
         """Get the modules."""
         return self._modules
 
-    def get(self, io_type: IOType | None = None, module: str | None = None) -> list[WagoModule]:
+    def get(self, select: IOType | str | None = None) -> list[WagoModule] | WagoModule:
         """Get the modules."""
-        if io_type:
-            return [i for i in self._modules if i.spec.io_type == io_type]
-        if module:
-            return [i for i in self._modules if i.spec.module_type == module or module in i.aliases]
-        return self._modules
+        if isinstance(select, IOType):
+            modules = [i for i in self._modules if i.spec.io_type == select]
+        elif isinstance(select, str):
+            modules = [i for i in self._modules if i.spec.module_type == select or select in i.aliases]
+        else:
+            modules = self._modules
+        if len(modules) == 1:
+            return modules[0]
+        return modules
 
     def __len__(self) -> int:
         """Get the number of modules."""
@@ -68,7 +72,7 @@ class Modules:
             return self._modules[index]
         elif isinstance(index, str):
             # If index is a string, try to find the module by alias
-            modules = [m for m in self._modules if index in m.aliases]
+            modules = [m for m in self._modules if index in m.aliases + [m.module_identifier]]
             if not modules:
                 raise KeyError(f"No module found with alias {index}")
             return modules[0] if len(modules) == 1 else modules
@@ -107,6 +111,7 @@ class Hub:
 
     def __init__(self, config: HubConfig, initialize: bool = True) -> None:
         """Initialize the hub."""
+        self._init_config: list[ModuleConfig] = config.modules
         self.config = config
         self.modules: Modules = Modules()
         self._discovery_register_values: list[int] = []
@@ -130,7 +135,7 @@ class Hub:
         self._client.connect()
         self._process_state_width = self._read_data_width_in_state()
         self.connection = ModbusConnection(
-            modbus_tcp_client=self._client, bits_in_state=self._process_state_width
+            modbus_tcp_client=self._client, bits_in_state=self._process_state_width, update_interval=self.config.update_interval
         )
         self.connection.update_state()
 
@@ -264,20 +269,19 @@ class Hub:
                 module_settings = (
                     self._init_config[index] if index < len(self._init_config) else None
                 )
-                self.modules.append_module(
-                    WagoModule.module_factory(
-                        index=index,
-                        module_identifier=ModuleIdentifier(value),
-                        modbus_address=AddressDict(self._next_address),
-                        modbus_connection=self.connection,
-                        config=module_settings,
-                    )
+                module = WagoModule.module_factory(
+                    index=index,
+                    module_identifier=ModuleIdentifier(value),
+                    modbus_address=AddressDict(self._next_address),
+                    modbus_connection=self.connection,
+                    config=module_settings,
                 )
+                self.modules.append_module(module)
+                self._next_address.update(cast(AddressDict, module.get_next_address()))
 
     def append_module(self, module: WagoModule) -> None:
         """Append a module to the hub."""
         self.modules.append_module(module)
-        self._next_address.update(cast(AddressDict, module.get_next_address()))
 
     def reset_modules(self) -> None:
         """Reset the modules."""
@@ -365,7 +369,8 @@ class Hub:
 
     def close(self) -> None:
         """Close the connection to the controller."""
-        self._client.close()
+        if self._client and self._client.connected:
+            self._client.close()
 
     def __str__(self) -> str:
         """Return a string representation of the hub."""
@@ -383,9 +388,15 @@ class Hub:
     @config.setter
     def config(self, config: HubConfig) -> None:
         """Set the config of the hub."""
-        if isinstance(config, HubConfig):
-            self._modbus_host = config.host
-            self._modbus_port = config.port
-            self._init_config = config.modules
-        else:
+        if not isinstance(config, HubConfig):
             raise ValueError("Config must be a HubConfig")
+        self._modbus_host = config.host
+        self._modbus_port = config.port
+
+        if self._init_config == config.modules:
+            return
+
+        # If the running config has changed, re-run the discovery process
+        self._init_config = config.modules
+        if self.is_initialized:
+            self.run_discovery()

@@ -4,29 +4,15 @@
 import logging
 
 from .dali_communication import (
-    DaliCommunicationRegister,
     DaliOutputMessage,
 )
 from .misc import dali_response_to_channel_list
-
+from .module_base import ModuleBase
 log = logging.getLogger(__name__)
 
 
-class ModuleSetup:
+class ModuleSetup(ModuleBase):
     """DALI commands."""
-
-    def __init__(self, dali_communication_register: DaliCommunicationRegister) -> None:
-        """Initialize the DALI commands.
-
-        Args:
-            dali_communication_register: DaliCommunicationRegister: The DALI communication register.
-
-        """
-        log.debug("Initializing DaliCommands %s", id(self))
-        self.dali_communication_register: DaliCommunicationRegister = (
-            dali_communication_register
-        )
-        self.dali_communication_register.read()
 
     # Macro Commands
 
@@ -72,6 +58,7 @@ class ModuleSetup:
                 )
             )
         )
+        return channels
 
     # 10. Abfrage Lampenausfall [0-31]
     # 11. Abfrage Lampenausfall [32-63]

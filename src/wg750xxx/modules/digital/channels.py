@@ -35,7 +35,7 @@ class DigitalIn(WagoChannel):
         if not isinstance(self.modbus_channel, Discrete):
             raise TypeError("modbus_channel must be a Discrete")
 
-    def get_instance(self) -> Self:
+    def get_instance(self) -> Self | "EventButton":
         """Get an instance of the channel."""
         if self.config.device_class == "event_button":
             return EventButton(self.modbus_channel, self.config)
@@ -269,15 +269,6 @@ class EventButton(DigitalIn):
         """
         self._raw_callback = callback
 
-    def notify_value_change(self, new_value: str) -> None:
-        """Notify the channel about a detected event.
-
-        Args:
-            event_value: The event value to notify
-        """
-        if self._raw_callback is not None:
-            self._raw_callback(new_value)
-
     def read(self) -> str | None:
         """Read the current event state.
 
@@ -285,3 +276,21 @@ class EventButton(DigitalIn):
             The current event state as string or empty string if no event
         """
         return self._last_event.value if self._last_event else None
+
+    def notify_value_change(self, new_value: Any) -> None:
+        if self.on_change_callback is None:
+            return
+
+        callback = self.on_change_callback
+
+        # Call the callback directly without checking update interval
+        if hasattr(callback, '__code__'):
+            if callback.__code__.co_argcount == 1:
+                callback(new_value)
+            elif callback.__code__.co_argcount == 2:
+                callback(new_value, self)
+            else:
+                raise ValueError(f"Callback function {callback.__name__} has {callback.__code__.co_argcount} arguments, expected 1 or 2")
+        # else:
+        #     # For MagicMock or other callable objects without __code__
+        #     callback(new_value)

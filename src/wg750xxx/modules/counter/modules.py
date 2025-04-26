@@ -2,9 +2,12 @@
 
 from typing import ClassVar
 
+from wg750xxx.modules.exceptions import WagoModuleError
+
 from ..module import WagoModule
 from ..spec import IOType, ModbusChannelSpec, ModuleSpec
 from .channels import Counter32Bit
+from .counter_communication import CounterCommunicationRegister
 
 
 class Wg750Counter(WagoModule):
@@ -20,6 +23,6 @@ class Wg750Counter(WagoModule):
 
     def create_channels(self) -> None:
         """Create channels for the module."""
-        # TODO: Implement properly
-        for i in range(self.spec.modbus_channels["input"]):
-            self.append_channel(Counter32Bit(self.modbus_channels["input"][i]))
+        if self.modbus_address is None:
+            raise WagoModuleError("Can not create channels, modbus address is not set")
+        self.append_channel(Counter32Bit(CounterCommunicationRegister(self.modbus_connection, self.modbus_address)))

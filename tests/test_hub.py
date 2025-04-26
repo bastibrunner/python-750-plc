@@ -5,7 +5,7 @@ import logging
 from typing import Dict
 
 from pytest_subtests import SubTests
-
+import pytest
 
 from wg750xxx.hub import Hub
 from wg750xxx.modules.module import WagoModule
@@ -125,3 +125,31 @@ def test_all_configured_modules_present(subtests: SubTests, configured_hub: Hub,
             assert module_id in [
                 module.module_identifier for module in configured_hub.modules
             ], f"Module {module_id} is missing from the hub"
+
+@pytest.mark.parametrize(
+    "module_idx,modbus_channel_type,start_address",
+    [
+        (1, "holding", 0x0000),
+        (2, "holding", 0x0004),
+        (3, "coil", 0x0000),
+        (4, "coil", 0x0004),
+        (5, "discrete", 0x0000),
+        (6, "discrete", 0x0010),
+        (7, "input", 0x0000),
+        (8, "input", 0x0004),
+        (9, "input", 0x0008),
+        (10, "input", 0x000C),
+        (11, "input", 0x0014),
+        (12, "discrete", 0x0014),
+    ],
+)
+def test_module_addresses(
+    configured_hub: Hub, module_idx: int, modbus_channel_type: str, start_address: int
+) -> None:
+    """Test module addresses."""
+    for index, channel in enumerate(
+        configured_hub.modules[module_idx].modbus_channels[modbus_channel_type] # type: ignore
+    ):
+        assert channel.address == start_address + index, (
+            f"Error: expected address {start_address + index}, got {channel.address}"
+        )

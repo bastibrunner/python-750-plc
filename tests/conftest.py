@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from wg750xxx.settings import HubConfig, ModuleConfig
+from wg750xxx.settings import HubConfig
 from wg750xxx.hub import Hub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient

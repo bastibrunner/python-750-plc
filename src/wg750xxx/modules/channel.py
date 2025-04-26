@@ -1,6 +1,7 @@
 """Module for handling the channels of a Wago Module."""
 
 import logging
+import time
 from typing import Any, Literal, Callable, Self
 
 from ..settings import ChannelConfig
@@ -52,15 +53,19 @@ class WagoChannel:
         config: ChannelConfig | None = None,
         channel_index: int | None = None,
         on_change_callback: Callable[[Any], None] | None = None,
+        update_interval: int | None = None,
+        module_id: str | None = None,
     ) -> None:
         """Initialize the channel."""
         self.channel_type: Literal[WagoChannelType] = channel_type
         self.modbus_channel: ModbusChannel | None = modbus_channel
+        self.update_interval: int | None = update_interval or 100
+        self._last_update: float = 0
+        self.module_id: str | None = module_id
         log.debug("Initializing channel %s", self.__repr__())
         assert self.channel_type is not None, (
             f"channel_type for {self.__class__.__name__} not set"
         )
-        self.name: str | None = None
         self.channel_index: int | None = channel_index
         self._config: ChannelConfig = config or ChannelConfig(
             type=self.channel_type,
@@ -69,12 +74,23 @@ class WagoChannel:
             unit_of_measurement=self.unit_of_measurement,
             icon=self.icon,
             value_template=self.value_template,
+            update_interval=self.update_interval,
         )
         self._on_change_callback: Callable[[Any], None] | None = on_change_callback
 
     def auto_generated_name(self) -> str:
         """Generate a name for the channel."""
-        return f"{self.channel_type} {self.channel_index or ''}".rstrip()
+        return f"{self.channel_type} {self.channel_index + 1 or ''}".rstrip()
+
+    @property
+    def name(self) -> str:
+        """Get the name of the channel."""
+        return self._config.name or self.auto_generated_name()
+
+    @name.setter
+    def name(self, value: str) -> None:
+        """Set the name of the channel."""
+        self._config.name = value
 
     def read(self) -> int | float | bool | None:
         """Read the channel value."""
@@ -119,9 +135,12 @@ class WagoChannel:
     @property
     def config(self) -> ChannelConfig:
         """Returns a ChannelConfig object."""
-        self._config.name = self.name or self.auto_generated_name()
         self._config.type = self.channel_type
-        # self._config.index = self.channel_index
+        self._config.index = self.channel_index
+        if not self._config.name:
+            self._config.name = self.name
+        self._config.module_id = self.module_id
+        self._config.update_interval = self.update_interval
         return self._config
 
     @config.setter
@@ -131,7 +150,9 @@ class WagoChannel:
             raise ValueError(
                 f"Channel type {config.type} does not match {self.channel_type}"
             )
-        self.name = config.name
+        self.channel_index = config.index or self.channel_index
+        self.module_id = config.module_id or self.module_id
+        self.update_interval = config.update_interval or self.update_interval
         self._config = config
 
     @property
@@ -155,5 +176,14 @@ class WagoChannel:
 
     def notify_value_change(self, new_value: Any) -> None:
         """Notify the channel that its value has changed."""
-        if self._on_change_callback is not None:
+        if (self.update_interval is None
+            or self._on_change_callback is None
+            or time.time() - self._last_update < self.update_interval / 1000):
+            return
+        self._last_update = time.time()
+        if self._on_change_callback.__code__.co_argcount == 1:
             self._on_change_callback(new_value)
+        elif self._on_change_callback.__code__.co_argcount == 2:
+            self._on_change_callback(new_value, self)
+        else:
+            raise ValueError(f"Callback function {self._on_change_callback.__name__} has {self._on_change_callback.__code__.co_argcount} arguments, expected 1 or 2")
