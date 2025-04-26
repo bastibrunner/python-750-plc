@@ -97,16 +97,18 @@ def test_dali_module_returns_correct_type_when_indexed(
     dali_hub: PLCHub, dali_modbus_mock: MockModbusTcpClientForDaliModule
 ) -> None:
     """Test the Dali module returns the correct type when indexed."""
-    assert isinstance(dali_hub.modules["641"], Wg750DaliMaster), (
+    module = dali_hub.modules["641"]
+    assert module is not None, "Dali module should be present"
+    assert isinstance(module, Wg750DaliMaster), (
         "Dali module should be a Wg750DaliMaster"
     )
-    assert isinstance(dali_hub.modules["641"][0], DaliChannel), (
+    assert isinstance(module[0], DaliChannel), (
         "Fetching element from DaliHub should return a DaliChannel"
     )
-    assert isinstance(dali_hub.modules["641"][0:5], list), (
+    assert isinstance(module[0:5], list), (
         "Sliced DaliHub should be a List"
     )
-    assert all(isinstance(module, DaliChannel) for module in dali_hub.modules["641"][0:5]), (
+    assert all(isinstance(channel, DaliChannel) for channel in module[0:5]), (
         "All items in sliced DaliHub should be DaliChannel instances"
     )
 

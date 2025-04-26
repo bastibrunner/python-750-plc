@@ -68,6 +68,7 @@ def test_channel_config_with_matching_config(modbus_mock_with_modules: MockModbu
         # assert module.config.update_interval == 1234, f"Module {i} should have update interval 1234"
         assert module.config.index == i, f"Module {i} should have index {i}"
         assert module.config.name == f"test_module_{module.index}", f"Module {i} should have name test_module_{module.index}"
+        assert len(module.channels) > 0, f"Module {i} should have channels"
         for j,channel in enumerate(module.channels):
             assert channel.name == f"Test Channel {j}", f"Channel {j} should have name Test Channel {j}"
             assert channel.config.update_interval == 4321, f"Channel {j} should have update interval 4321"

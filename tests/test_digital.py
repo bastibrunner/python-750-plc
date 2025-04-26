@@ -180,6 +180,7 @@ def test_module_channel_count(configured_hub: PLCHub) -> None:
             continue
 
         # Digital modules should have channels matching their module spec
+        assert module.channels is not None, f"Module {module.display_name} has no channels"
         channel_count = len(module.channels)
         expected_count = 0
 

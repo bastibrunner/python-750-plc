@@ -89,7 +89,7 @@ class DigitalOut(WagoChannel):
         """Write a value to the digital output channel."""
         self.modbus_channel.write(value)
 
-    def read(self) -> bool:
+    def read(self) -> bool | str:
         """Read the state of the digital output channel."""
         return self.modbus_channel.read()
 

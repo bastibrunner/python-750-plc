@@ -163,7 +163,8 @@ class PLCHub:
 
     def _setup_basic_test_modules(self) -> None:
         """Set up basic modules for testing when discovery is disabled."""
-
+        if self.connection is None:
+            raise ValueError("Connection is not initialized")
         # Add a digital input module (DI with 8 channels - 36865)
         self.modules.append_module(
             WagoModule.module_factory(

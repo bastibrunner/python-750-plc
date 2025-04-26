@@ -37,7 +37,7 @@ def main() -> None:
     dali_module = hub.modules.get("641")
     dali_module.on_change_callback = on_change_callback
 
-    hub.connection.start_continuous_update(30, discrete_interval=0.01, input_interval=0.01)
+    hub.connection.start_continuous_update(30, discrete_interval=100, input_interval=100)
 
     try:
         while True:

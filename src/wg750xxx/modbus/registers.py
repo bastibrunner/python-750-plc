@@ -6,6 +6,140 @@ from typing import Self
 
 import numpy as np
 
+class Bits:
+    """A class to represent a Modbus one bit register of any length."""
+
+    def __init__(
+        self,
+        bits: list[bool]
+        | np.ndarray[tuple[int, ...], np.dtype[np.bool_]]
+        | None = None,
+        size: int = 0,
+    ) -> None:
+        """Initialize the Bits class."""
+        if bits is None:
+            self._bits = np.array([], dtype=bool)
+        elif isinstance(bits, np.ndarray):
+            self._bits = bits
+        else:
+            self._bits = np.array(bits, dtype=bool)
+        if size == 0:
+            size = len(self._bits)
+        # padding with zeros if width is greater than the number of bits given
+        if size > len(self._bits):
+            self._bits = np.pad(
+                self._bits,
+                (0, size - len(self._bits)),
+                mode="constant",
+                constant_values=False,
+            )
+        elif size < len(self._bits):
+            self._bits = self._bits[:size]
+        self.width: int = len(self._bits)
+
+    def copy(self) -> Self:
+        """Copy the bit register."""
+        return Bits(self._bits.copy())
+
+    def __str__(self) -> str:
+        """Get the string representation of the bit register."""
+        return "".join([f"{b}" for b in self._bits])
+
+    def __repr__(self) -> str:
+        """Get the string representation of the bit register."""
+        return f"{self._bits}"
+
+    @property
+    def value(self) -> list[bool]:
+        """Get the content of the bit register."""
+        return self._bits.tolist()
+
+    @value.setter
+    def value(self, value: list[bool]) -> None:
+        self._bits[...] = np.array(value, dtype=bool)
+
+    # def value(self, value: list[int], start: int = 0):
+    #     self._bits = self._bits[:start] + value + self._bits[start+len(value):]
+
+    def value_to_hex(self) -> str:
+        """Get the bit register content as hexadecimal string representation."""
+        return "".join([f"{b:04X}" for b in self._bits])
+
+    def value_to_bin(self) -> str:
+        """Get the bit register content as binary string representation."""
+        return "".join([f"{b:016b}" for b in self._bits])
+
+    def value_to_int(self) -> int:
+        """Get the bit register content as integer representation."""
+        return sum(b << (16 * i) for i, b in enumerate(self._bits))
+
+    def value_to_float(self) -> float:
+        """Get the bit register content as float representation."""
+        raise NotImplementedError
+
+    def value_to_string(self) -> str:
+        """Get the bit register content as string representation."""
+        return "".join(
+            [f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bits if b != 0]
+        ).rstrip("\x00")
+
+    def __getitem__(self, index: slice | int) -> Self | list[Self]| bool:
+        """Get the bit register content at a specific index or slice."""
+        if isinstance(index, slice):
+            return Bits(self._bits[index])
+        if isinstance(index, int):
+            return self._bits[index]
+        raise ValueError(f"Invalid index type: {type(index)}")
+
+    def __setitem__(
+        self, index: int | slice | EllipsisType, value: int | list[int]
+    ) -> None:
+        """Set the bit register content at a specific index or slice."""
+        if isinstance(index, EllipsisType):
+            self._bits[...] = np.array(value, dtype=bool)
+        else:
+            self._bits[index] = value
+
+    def __len__(self) -> int:
+        """Get the length of the bit register."""
+        return len(self._bits)
+
+    def __iter__(self) -> Iterator[np.bool_]:
+        """Get the iterator of the bit register."""
+        return iter(self._bits)
+
+    def __next__(self):
+        """Get the next bit in the bit register."""
+        return next(self._bits)
+
+    def __missing__(self, index: int):
+        """Get the bit at a specific index."""
+        return self._bits[index]
+
+    def __contains__(self, item) -> bool:
+        """Check if the bit register contains a specific item."""
+        if isinstance(item, Words):
+            return item.value.base is self.value
+        return False
+
+    def __eq__(self, other) -> bool:
+        """Check if the bit register is equal to another bit register."""
+        if not isinstance(other, Words):
+            return False
+        if self.width != other.width:
+            return False
+        return np.array_equal(self._bits, other.value)
+
+    def __ne__(self, other) -> bool:
+        """Check if the bit register is not equal to another bit register."""
+        return not self.__eq__(other)
+
+    def __hash__(self) -> int:
+        """Get the hash of the bit register."""
+        return hash(self._bits)
+
+
+
 class Bytes:
     """A class to represent a Modbus byte (8-bit) register of any length.
 
@@ -32,23 +166,23 @@ class Bytes:
         else:
             self._bytes = np.array(value, dtype=np.uint8)
         if size == 0:
-            size = self._bytes.size
+            size = len(self._bytes)
         # padding with zeros if width is greater than the number of bytes given
-        if size > self._bytes.size:
+        if size > len(self._bytes):
             self._bytes = np.pad(
                 self._bytes,
                 (0, size - len(self._bytes)),
                 mode="constant",
                 constant_values=0,
             )
-        elif size < self._bytes.size:
+        elif size < len(self._bytes):
             self._bytes = self._bytes[:size]
-        self.width: int = self._bytes.size
+        self.width: int = len(self._bytes)
 
     def _from_int(self, value: int, byteorder: str = "little") -> "Bytes":
         """Convert an integer to a byte register."""
         if value < 256:
-            return np.array([value], dtype=np.uint8)
+            return Bytes(np.array([value], dtype=np.uint8))
         else:
             # split the integer into bytes
             values = np.array([], dtype=np.uint8)
@@ -60,7 +194,7 @@ class Bytes:
                 while value > 0:
                     values = np.append(values, value & 0xFF)
                     value >>= 8
-            return values
+            return Bytes(values)
 
     def __len__(self) -> int:
         """Get the length of the byte register."""
@@ -100,6 +234,14 @@ class Bytes:
     def value_to_int(self, byteorder: str = "little") -> int:
         """Get the byte register content as integer representation."""
         return int.from_bytes(self._bytes, byteorder=byteorder)
+
+    def bits(self) -> Bits:
+        """Get the byte register content as bit register."""
+        bit_list = []
+        for byte in self._bytes:
+            for i in range(7, -1, -1):
+                bit_list.append(bool((byte >> i) & 1))
+        return Bits(bit_list)
 
     def __int__(self) -> int:
         """Get the byte register content as integer representation."""
@@ -242,10 +384,18 @@ class Words:
     def value_to_int(self) -> int:
         """Get the word register content as integer representation."""
         if self._words.size > 1:
-            return self.to_bytes("little").value_to_int("big")
+            return self.bytes("little").value_to_int("big")
         return int(self._words[0])
 
-    def to_bytes(self, byteorder: str = "little") -> Bytes:
+    def bits(self) -> Bits:
+        """Get the word register content as bit register."""
+        bit_list = []
+        for word in self._words:
+            for i in range(15, -1, -1):
+                bit_list.append(bool((word >> i) & 1))
+        return Bits(bit_list)
+
+    def bytes(self, byteorder: str = "little") -> Bytes:
         """Convert the word register to a byte register."""
         byte_list = []
         if byteorder == "big":
@@ -333,138 +483,6 @@ class Words:
         """Get the hash of the word register."""
         return hash(self._words)
 
-
-class Bits:
-    """A class to represent a Modbus one bit register of any length."""
-
-    def __init__(
-        self,
-        bits: list[bool]
-        | np.ndarray[tuple[int, ...], np.dtype[np.bool_]]
-        | None = None,
-        size: int = 0,
-    ) -> None:
-        """Initialize the Bits class."""
-        if bits is None:
-            self._bits = np.array([], dtype=bool)
-        elif isinstance(bits, np.ndarray):
-            self._bits = bits
-        else:
-            self._bits = np.array(bits, dtype=bool)
-        if size == 0:
-            size = len(self._bits)
-        # padding with zeros if width is greater than the number of bits given
-        if size > len(self._bits):
-            self._bits = np.pad(
-                self._bits,
-                (0, size - len(self._bits)),
-                mode="constant",
-                constant_values=False,
-            )
-        elif size < len(self._bits):
-            self._bits = self._bits[:size]
-        self.width: int = len(self._bits)
-
-    def copy(self) -> Self:
-        """Copy the bit register."""
-        return Bits(self._bits.copy())
-
-    def __str__(self) -> str:
-        """Get the string representation of the bit register."""
-        return "".join([f"{b}" for b in self._bits])
-
-    def __repr__(self) -> str:
-        """Get the string representation of the bit register."""
-        return f"{self._bits}"
-
-    @property
-    def value(self) -> list[bool]:
-        """Get the content of the bit register."""
-        return self._bits.tolist()
-
-    @value.setter
-    def value(self, value: list[bool]) -> None:
-        self._bits[...] = np.array(value, dtype=bool)
-
-    # def value(self, value: list[int], start: int = 0):
-    #     self._bits = self._bits[:start] + value + self._bits[start+len(value):]
-
-    def value_to_hex(self) -> str:
-        """Get the bit register content as hexadecimal string representation."""
-        return "".join([f"{b:04X}" for b in self._bits])
-
-    def value_to_bin(self) -> str:
-        """Get the bit register content as binary string representation."""
-        return "".join([f"{b:016b}" for b in self._bits])
-
-    def value_to_int(self) -> int:
-        """Get the bit register content as integer representation."""
-        return sum(b << (16 * i) for i, b in enumerate(self._bits))
-
-    def value_to_float(self) -> float:
-        """Get the bit register content as float representation."""
-        raise NotImplementedError
-
-    def value_to_string(self) -> str:
-        """Get the bit register content as string representation."""
-        return "".join(
-            [f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bits if b != 0]
-        ).rstrip("\x00")
-
-    def __getitem__(self, index: slice | int) -> Self | list[Self]| bool:
-        """Get the bit register content at a specific index or slice."""
-        if isinstance(index, slice):
-            return Bits(self._bits[index])
-        if isinstance(index, int):
-            return self._bits[index]
-        raise ValueError(f"Invalid index type: {type(index)}")
-
-    def __setitem__(
-        self, index: int | slice | EllipsisType, value: int | list[int]
-    ) -> None:
-        """Set the bit register content at a specific index or slice."""
-        if isinstance(index, EllipsisType):
-            self._bits[...] = np.array(value, dtype=bool)
-        else:
-            self._bits[index] = value
-
-    def __len__(self) -> int:
-        """Get the length of the bit register."""
-        return len(self._bits)
-
-    def __iter__(self) -> Iterator[np.bool_]:
-        """Get the iterator of the bit register."""
-        return iter(self._bits)
-
-    def __next__(self):
-        """Get the next bit in the bit register."""
-        return next(self._bits)
-
-    def __missing__(self, index: int):
-        """Get the bit at a specific index."""
-        return self._bits[index]
-
-    def __contains__(self, item) -> bool:
-        """Check if the bit register contains a specific item."""
-        if isinstance(item, Words):
-            return item.value.base is self.value
-        return False
-
-    def __eq__(self, other) -> bool:
-        """Check if the bit register is equal to another bit register."""
-        if not isinstance(other, Words):
-            return False
-        if self.width != other.width:
-            return False
-        return np.array_equal(self._bits, other.value)
-
-    def __ne__(self, other) -> bool:
-        """Check if the bit register is not equal to another bit register."""
-        return not self.__eq__(other)
-
-    def __hash__(self) -> int:
-        """Get the hash of the bit register."""
-        return hash(self._bits)
 
 
 class Register(Words):

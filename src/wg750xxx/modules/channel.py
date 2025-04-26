@@ -95,7 +95,7 @@ class WagoChannel:
         """Set the name of the channel."""
         self._config.name = value
 
-    def read(self) -> int | float | bool | None:
+    def read(self) -> Any:
         """Read the channel value."""
         raise NotImplementedError(
             f"read method not implemented for {self.__class__.__name__}"
@@ -132,6 +132,8 @@ class WagoChannel:
             return False
         return (
             self.channel_type == other.channel_type
+            and self.modbus_channel is not None
+            and other.modbus_channel is not None
             and self.modbus_channel.address == other.modbus_channel.address
         )
 

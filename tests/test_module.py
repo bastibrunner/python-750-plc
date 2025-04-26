@@ -8,9 +8,8 @@ import pytest
 from pytest_socket import enable_socket, socket_allow_hosts
 from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.spec import IOType
-from wg750xxx.settings import HubConfig
-from wg750xxx.modules.module import ModuleConfig
-
+from wg750xxx.settings import HubConfig, ModuleConfig
+from wg750xxx.modules.module import WagoModule
 
 @pytest.fixture(scope="module")
 def hub() -> Generator[PLCHub, None, None]:
@@ -69,19 +68,19 @@ def test_read_register(hub: PLCHub) -> None:
 
 def test_module_count(hub: PLCHub) -> None:
     """Test counting analog input modules."""
-    modules = hub.modules.get(io_type=IOType(input=True))
+    modules = hub.modules.get(IOType(input=True))
     assert len(modules) == 5, (
         f"Error: expected 5 analog input modules, got {len(modules)}"
     )
-    modules = hub.modules.get(io_type=IOType(output=True))
-    assert len(modules) == 1, (
+    modules = hub.modules.get(IOType(output=True))
+    assert isinstance(modules, WagoModule), (
         f"Error: expected 1 analog output modules, got {len(modules)}"
     )
-    modules = hub.modules.get(io_type=IOType(digital=True,input=True))
+    modules = hub.modules.get(IOType(digital=True,input=True))
     assert len(modules) == 19, (
         f"Error: expected 19 digital input modules, got {len(modules)}"
     )
-    modules = hub.modules.get(io_type=IOType(digital=True,output=True))
+    modules = hub.modules.get(IOType(digital=True,output=True))
     assert len(modules) == 17, (
         f"Error: expected 17 digital output modules, got {len(modules)}"
     )
@@ -100,7 +99,7 @@ def test_module_digital_input_bits_match(hub: PLCHub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
         module.spec.modbus_channels["discrete"]
-        for module in hub.modules.get(io_type=IOType(digital=True,input=True))
+        for module in hub.modules.get(IOType(digital=True,input=True))
         if module.spec.io_type.input
     )
     assert digital_input_bits == 146, (
@@ -113,7 +112,7 @@ def test_module_digital_output_bits_match(hub: PLCHub) -> None:
     """Test matching digital output bits."""
     digital_outputs_bits = sum(
         module.spec.modbus_channels["coil"]
-        for module in hub.modules.get(io_type=IOType(digital=True,output=True))
+        for module in hub.modules.get(IOType(digital=True,output=True))
         if module.spec.io_type.output
     )
     assert digital_outputs_bits == 80, (
@@ -127,7 +126,7 @@ def test_module_analog_input_bits_match(hub: PLCHub) -> None:
     analog_inputs_bits = (
         sum(
             module.spec.modbus_channels["input"]
-            for module in hub.modules.get(io_type=IOType(input=True))
+            for module in hub.modules.get(IOType(input=True))
             if module.spec.io_type.input
         )
         * 16
@@ -143,7 +142,7 @@ def test_module_analog_output_bits_match(hub: PLCHub) -> None:
     analog_outputs_bits = (
         sum(
             module.spec.modbus_channels["holding"]
-            for module in hub.modules.get(io_type=IOType(output=True))
+            for module in [hub.modules.get(IOType(output=True))]
             if module.spec.io_type.output
         )
         * 16
@@ -167,8 +166,9 @@ def test_channel_count_match_all_modules(hub: PLCHub) -> None:
 
 def test_module_counter_count(hub: PLCHub) -> None:
     """Test counter count."""
-    modules = hub.modules.get(module="404")
-    assert len(modules) == 3, (
+    modules = hub.modules.get("404")
+    assert modules is not None, "Counter modules should be present"
+    assert isinstance(modules, list) and len(modules) == 3, (
         f"Error: expected 3 counter modules, got {len(modules)}"
     )
     for module in modules:

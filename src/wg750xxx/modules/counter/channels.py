@@ -26,25 +26,17 @@ class Counter32Bit(WagoChannel):
 
     def write(self, value: int) -> None:
         """Write the counter value."""
-        raise NotImplementedError("Write method not implemented for Counter32Bit")
+        self.communication_register.value = value
 
 
     def reset(self) -> None:
         """Reset the counter."""
-        self.communication_register.value = 0
+        self.communication_register.reset()
 
     def lock(self) -> None:
         """Lock the counter."""
-        self.communication_register.lock = True
+        self.communication_register.lock()
 
     def unlock(self) -> None:
         """Unlock the counter."""
-        self.communication_register.lock = False
-
-    def set(self,value:int) -> None:
-        """Set the counter."""
-        self.communication_register.value = value
-
-    def clear(self) -> None:
-        """Clear the counter."""
-        self.communication_register.set = False
+        self.communication_register.unlock()

@@ -304,6 +304,8 @@ class WagoModule:
                     self.display_name,
                     len(self._channel_init_config),
                 )
+        if self.channels is None:
+            self.channels = []
         self.channels.append(channel.get_instance())
 
     def _reset_modbus_channel_configuration(self) -> None:

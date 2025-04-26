@@ -30,7 +30,7 @@ def test_words_to_bytes_method():
     # Create a Words instance
     words_instance = Words([0x0000,0x01FF])
     # Convert the words to a Bytes instance
-    bytes_instance = words_instance.to_bytes()
+    bytes_instance = words_instance.bytes()
     # Verify the Bytes instance is a new Bytes instance with the same values
     assert isinstance(bytes_instance, Bytes)
     assert len(bytes_instance) == 4
@@ -42,7 +42,7 @@ def test_words_to_bytes_method_with_byte_order():
     words = Words([0x01FF,0x02FF])
 
     # Convert the words to a Bytes instance with the correct byte order
-    bytes_instance = words.to_bytes(byteorder="big")
+    bytes_instance = words.bytes(byteorder="big")
 
     # Verify the Bytes instance is a new Bytes instance with the correct byte order
     assert isinstance(bytes_instance, Bytes)

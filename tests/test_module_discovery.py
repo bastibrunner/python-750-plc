@@ -5,10 +5,9 @@ import logging
 
 import pytest
 
-from wg750xxx.wg750xxx import PLCHub, ControllerInfo
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.exceptions import WagoModuleError
 from wg750xxx.settings import HubConfig, ModuleConfig
-from wg750xxx.modbus.state import ModbusConnection
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 

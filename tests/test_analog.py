@@ -52,8 +52,8 @@ def test_analog_output_modules_created(configured_hub: PLCHub) -> None:
     for module in analog_output_modules:
         assert any(isinstance(module, cls) for cls in AnalogOutputModuleTypes), \
             f"Module {module.display_name} should be an Analog Output Module"
-        assert len(module.channels or []) > 0, f"Module {module.display_name} has no channels"
-
+        assert module.channels is not None, f"Module {module.display_name} has no channels"
+        assert len(module.channels) > 0, f"Module {module.display_name} has no channels"
         for channel in module.channels:
             assert channel.channel_type in ["Int8 Out", "Int16 Out", "Float16 Out"], \
                 f"Channel {channel} has incorrect type {channel.channel_type}"

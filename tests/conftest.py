@@ -47,7 +47,7 @@ def modbus_mock() -> Generator[MockModbusTcpClient, None, None]:
     Returns:
         A mock ModbusTcpClient that simulates modbus responses
     """
-    with patch("wg750xxx.hub.ModbusTcpClient") as modbus_tcp_client:
+    with patch("wg750xxx.wg750xxx.ModbusTcpClient") as modbus_tcp_client:
         yield MockModbusTcpClient(modbus_tcp_client)
 
 
@@ -61,7 +61,7 @@ def modbus_mock_with_modules(modules: Dict[int, int]) -> Generator[MockModbusTcp
     Returns:
         A mock ModbusTcpClient configured with the specified modules
     """
-    with patch("wg750xxx.hub.ModbusTcpClient") as modbus_tcp_client:
+    with patch("wg750xxx.wg750xxx.ModbusTcpClient") as modbus_tcp_client:
         yield MockModbusTcpClient(modbus_tcp_client, modules)
 
 
@@ -72,7 +72,7 @@ def dali_modbus_mock() -> Generator[MockModbusTcpClientForDaliModule, None, None
     Returns:
         A specialized mock for DALI module testing
     """
-    with patch("wg750xxx.hub.ModbusTcpClient") as modbus_tcp_client:
+    with patch("wg750xxx.wg750xxx.ModbusTcpClient") as modbus_tcp_client:
         mock: MockModbusTcpClientForDaliModule = MockModbusTcpClientForDaliModule(modbus_tcp_client)
         yield mock
 

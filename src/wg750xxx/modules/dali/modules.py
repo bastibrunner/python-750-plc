@@ -124,7 +124,7 @@ class Wg750DaliMaster(WagoModule):
         self.dali_communication_register.read_status_byte()
         self.dali_communication_register.read_control_byte()
 
-        if self.dali_communication_register.read_request():  # TODO: This is a hack to find out why the DALI master is requesting a read.
+        if self.dali_communication_register.read_request():  # TODO: This is to find out why the DALI master is requesting a read.
             data = self.dali_communication_register.read()
             _LOGGER.warning(
                 "DALI master is requesting an unexpected read before write: %s", data
