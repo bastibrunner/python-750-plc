@@ -5,6 +5,7 @@ import logging
 
 from .dali_communication import (
     DaliOutputMessage,
+    DaliInputMessage,
 )
 from .misc import dali_response_to_channel_list
 from .module_base import ModuleBase
@@ -142,7 +143,7 @@ class ModuleSetup(ModuleBase):
 
     # 21. Abfragen der Level-Poll-Periode
     @property
-    def level_poll_period(self) -> int:
+    def level_poll_period(self) -> DaliInputMessage | None:
         """Get level poll period."""
         return self.dali_communication_register.write(
             DaliOutputMessage(command_extension=0x16), response=True

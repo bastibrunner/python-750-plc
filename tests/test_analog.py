@@ -4,7 +4,7 @@
 import logging
 from random import randint
 import re
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.analog.modules import (
     Wg750AnalogIn1Ch, Wg750AnalogIn2Ch, Wg750AnalogIn4Ch, Wg750AnalogIn8Ch,
     Wg750AnalogOut2Ch, Wg750AnalogOut4Ch
@@ -21,7 +21,7 @@ AnalogInputModuleTypes = (Wg750AnalogIn1Ch, Wg750AnalogIn2Ch, Wg750AnalogIn4Ch, 
 AnalogOutputModuleTypes = (Wg750AnalogOut2Ch, Wg750AnalogOut4Ch)
 
 
-def test_analog_input_modules_created(configured_hub: Hub) -> None:
+def test_analog_input_modules_created(configured_hub: PLCHub) -> None:
     """Test that analog input modules are created correctly."""
     analog_input_modules = [
         module for module in configured_hub.modules
@@ -40,7 +40,7 @@ def test_analog_input_modules_created(configured_hub: Hub) -> None:
                 f"Channel {channel} has incorrect type {channel.channel_type}"
 
 
-def test_analog_output_modules_created(configured_hub: Hub) -> None:
+def test_analog_output_modules_created(configured_hub: PLCHub) -> None:
     """Test that analog output modules are created correctly."""
     analog_output_modules = [
         module for module in configured_hub.modules
@@ -60,7 +60,7 @@ def test_analog_output_modules_created(configured_hub: Hub) -> None:
 
 
 def test_analog_input_channel_read(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test reading from analog input channels."""
     analog_input_modules = [
@@ -91,7 +91,7 @@ def test_analog_input_channel_read(
 
 
 def test_analog_output_channel_write(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test writing to analog output channels."""
     analog_output_modules = [
@@ -117,7 +117,7 @@ def test_analog_output_channel_write(
 
 
 def test_analog_channel_callbacks(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test that analog channel callbacks work correctly."""
     callback_called = False
@@ -161,7 +161,7 @@ def test_analog_channel_callbacks(
     test_channel.on_change_callback = None
 
 
-def test_analog_channel_config(configured_hub: Hub) -> None:
+def test_analog_channel_config(configured_hub: PLCHub) -> None:
     """Test analog channel configuration."""
 
     analog_input_modules = [

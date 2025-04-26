@@ -7,7 +7,7 @@ import re
 
 import pytest
 
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.digital.modules import Wg750DigitalIn, Wg750DigitalOut
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
@@ -21,7 +21,7 @@ DigitalInputModule = Wg750DigitalIn
 DigitalOutputModule = Wg750DigitalOut
 
 
-def test_digital_input_modules_created(configured_hub: Hub) -> None:
+def test_digital_input_modules_created(configured_hub: PLCHub) -> None:
     """Test that digital input modules are created correctly."""
     digital_input_modules = [
         module for module in configured_hub.modules
@@ -40,7 +40,7 @@ def test_digital_input_modules_created(configured_hub: Hub) -> None:
                 f"Channel {channel} has incorrect type {channel.channel_type}"
 
 
-def test_digital_output_modules_created(configured_hub: Hub) -> None:
+def test_digital_output_modules_created(configured_hub: PLCHub) -> None:
     """Test that digital output modules are created correctly."""
     digital_output_modules = [
         module for module in configured_hub.modules
@@ -60,7 +60,7 @@ def test_digital_output_modules_created(configured_hub: Hub) -> None:
 
 
 def test_digital_input_channel_read(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test reading from digital input channels."""
     for _ in range(10):  # Test multiple random states
@@ -85,7 +85,7 @@ def test_digital_input_channel_read(
 
 
 def test_digital_output_channel_write(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test writing to digital output channels."""
     for _ in range(10):  # Test multiple random values
@@ -106,7 +106,7 @@ def test_digital_output_channel_write(
 
 
 def test_digital_channel_callbacks(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test that digital channel callbacks work correctly."""
     callback_called = False
@@ -150,7 +150,7 @@ def test_digital_channel_callbacks(
     test_channel.on_change_callback = None
 
 
-def test_digital_channel_config(configured_hub: Hub) -> None:
+def test_digital_channel_config(configured_hub: PLCHub) -> None:
     """Test digital channel configuration."""
     for module in configured_hub.modules:
         if not module.spec.io_type.digital:
@@ -173,7 +173,7 @@ def test_digital_channel_config(configured_hub: Hub) -> None:
             channel.name = original_name
 
 
-def test_module_channel_count(configured_hub: Hub) -> None:
+def test_module_channel_count(configured_hub: PLCHub) -> None:
     """Test that modules have the correct number of channels."""
     for module in configured_hub.modules:
         if not module.spec.io_type.digital:

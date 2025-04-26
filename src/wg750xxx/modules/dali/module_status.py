@@ -35,6 +35,7 @@ class ModuleStatus(ModuleBase):
                 )
             )
         )
+        return channels
 
     # 10. Abfrage Lampenausfall [0-31]
     # 11. Abfrage Lampenausfall [32-63]

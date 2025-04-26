@@ -3,7 +3,7 @@
 # pylint: disable=protected-access,redefined-outer-name
 import pytest
 
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.settings import HubConfig
 from wg750xxx.settings import ModuleConfig
 
@@ -12,7 +12,7 @@ def test_hub_accepts_only_hubconfig():
     """Test that Hub only accepts HubConfig as parameter."""
     # Valid configuration should work fine
     hub_config = HubConfig(host="test_host", port=1234)
-    hub = Hub(hub_config, initialize=False)
+    hub = PLCHub(hub_config, initialize=False)
     assert hub._modbus_host == "test_host"
     assert hub._modbus_port == 1234
     assert hub._init_config == []
@@ -24,14 +24,14 @@ def test_hub_accepts_only_hubconfig():
         port=1234,
         modules=[module_config]
     )
-    hub = Hub(hub_config_with_modules, initialize=False)
+    hub = PLCHub(hub_config_with_modules, initialize=False)
     assert hub._init_config == [module_config]
 
 
 def test_hub_config_getter():
     """Test the config property returns the correct HubConfig without modules_dict."""
     hub_config = HubConfig(host="test_host", port=1234)
-    hub = Hub(hub_config, initialize=False)
+    hub = PLCHub(hub_config, initialize=False)
 
     # Add a module to the hub
     module_config = ModuleConfig(name="test_module", type="test_type", index=0)
@@ -49,7 +49,7 @@ def test_hub_config_getter():
 def test_hub_config_setter():
     """Test that the config setter only accepts HubConfig."""
     hub_config = HubConfig(host="test_host", port=1234)
-    hub = Hub(hub_config, initialize=False)
+    hub = PLCHub(hub_config, initialize=False)
 
     # Update with a new HubConfig
     new_config = HubConfig(

@@ -13,8 +13,9 @@ from ..modbus.state import (
     ModbusChannelType,
     ModbusConnection,
 )
-from .spec import ModuleSpec
+from ..const import DEFAULT_SCAN_INTERVAL
 from ..settings import ModuleConfig, ChannelConfig
+from .spec import ModuleSpec
 
 log = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ class WagoModule:
         self._display_name: str | None = None
         self._channel_init_config: list[ChannelConfig] | None = None
         self._config: ModuleConfig | None = None
-        self.update_interval: int = update_interval or 100
+        self.update_interval: int = update_interval or DEFAULT_SCAN_INTERVAL
         log.debug("Initializing module %s", self.__repr__())
 
         if module_identifier is not None:

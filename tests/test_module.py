@@ -6,31 +6,31 @@ from typing import List, Generator
 
 import pytest
 from pytest_socket import enable_socket, socket_allow_hosts
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.spec import IOType
 from wg750xxx.settings import HubConfig
 from wg750xxx.modules.module import ModuleConfig
 
 
 @pytest.fixture(scope="module")
-def hub() -> Generator[Hub, None, None]:
+def hub() -> Generator[PLCHub, None, None]:
     """Create a Hub instance for testing."""
     enable_socket()
     socket_allow_hosts(["10.22.22.16", "localhost", "::1"], allow_unix_socket=True)
     try:
-        hub_instance = Hub(HubConfig(host="10.22.22.16", port=502), True)
+        hub_instance = PLCHub(HubConfig(host="10.22.22.16", port=502), True)
         yield hub_instance
     except Exception as e:
         pytest.skip(f"Test skipped: Need physical PLC connection, but failed to create Hub instance: {e}")
 
 
 @pytest.fixture(scope="module")
-def module_config(hub: Hub) -> List[ModuleConfig]:
+def module_config(hub: PLCHub) -> List[ModuleConfig]:
     """Store module configuration for debugging."""
     return [i.config for i in hub.modules]
 
 
-def test_read_register(hub: Hub) -> None:
+def test_read_register(hub: PLCHub) -> None:
     """Test reading registers."""
     client = hub._client
     if client is None:
@@ -67,7 +67,7 @@ def test_read_register(hub: Hub) -> None:
     _coils = register.bits
 
 
-def test_module_count(hub: Hub) -> None:
+def test_module_count(hub: PLCHub) -> None:
     """Test counting analog input modules."""
     modules = hub.modules.get(io_type=IOType(input=True))
     assert len(modules) == 5, (
@@ -88,7 +88,7 @@ def test_module_count(hub: Hub) -> None:
 
 
 
-def test_module_count_total(hub: Hub) -> None:
+def test_module_count_total(hub: PLCHub) -> None:
     """Test counting total modules."""
     assert len(hub.modules) == 47, (
         f"Error: expected 47 modules, got {len(hub.modules)}"
@@ -96,7 +96,7 @@ def test_module_count_total(hub: Hub) -> None:
 
 
 
-def test_module_digital_input_bits_match(hub: Hub) -> None:
+def test_module_digital_input_bits_match(hub: PLCHub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
         module.spec.modbus_channels["discrete"]
@@ -109,7 +109,7 @@ def test_module_digital_input_bits_match(hub: Hub) -> None:
 
 
 
-def test_module_digital_output_bits_match(hub: Hub) -> None:
+def test_module_digital_output_bits_match(hub: PLCHub) -> None:
     """Test matching digital output bits."""
     digital_outputs_bits = sum(
         module.spec.modbus_channels["coil"]
@@ -122,7 +122,7 @@ def test_module_digital_output_bits_match(hub: Hub) -> None:
 
 
 
-def test_module_analog_input_bits_match(hub: Hub) -> None:
+def test_module_analog_input_bits_match(hub: PLCHub) -> None:
     """Test matching analog input bits."""
     analog_inputs_bits = (
         sum(
@@ -138,7 +138,7 @@ def test_module_analog_input_bits_match(hub: Hub) -> None:
 
 
 
-def test_module_analog_output_bits_match(hub: Hub) -> None:
+def test_module_analog_output_bits_match(hub: PLCHub) -> None:
     """Test matching analog output bits."""
     analog_outputs_bits = (
         sum(
@@ -154,7 +154,7 @@ def test_module_analog_output_bits_match(hub: Hub) -> None:
 
 
 
-def test_channel_count_match_all_modules(hub: Hub) -> None:
+def test_channel_count_match_all_modules(hub: PLCHub) -> None:
     """Test matching channel counts for all modules."""
     for module in hub.modules:
         channels_spec = sum(module.spec.modbus_channels.values())
@@ -165,7 +165,7 @@ def test_channel_count_match_all_modules(hub: Hub) -> None:
             f"Error: expected {channels_spec} channels, got {channels_actual}"
         )
 
-def test_module_counter_count(hub: Hub) -> None:
+def test_module_counter_count(hub: PLCHub) -> None:
     """Test counter count."""
     modules = hub.modules.get(module="404")
     assert len(modules) == 3, (
@@ -230,7 +230,7 @@ def test_module_counter_count(hub: Hub) -> None:
     ],
 )
 def test_module_channel_type(
-    hub: Hub, module_idx: int, modbus_channel_type: str
+    hub: PLCHub, module_idx: int, modbus_channel_type: str
 ) -> None:
     """Test module channel types."""
     for channel in hub.modules[module_idx].channels:
@@ -255,7 +255,7 @@ def test_module_channel_type(
     ],
 )
 def test_module_addresses(
-    hub: Hub, module_idx: int, modbus_channel_type: str, start_address: int
+    hub: PLCHub, module_idx: int, modbus_channel_type: str, start_address: int
 ) -> None:
     """Test module addresses."""
     for index, channel in enumerate(

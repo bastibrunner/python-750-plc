@@ -5,7 +5,7 @@
 import logging
 from typing import cast, List
 
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.dali.module_setup import ModuleSetup
 from wg750xxx.modules.dali.dali_communication import DaliOutputMessage
 from wg750xxx.modules.dali.modules import Wg750DaliMaster, DaliChannel
@@ -19,12 +19,12 @@ log: logging.Logger = logging.getLogger(__name__)
 # Using fixtures from conftest.py now
 
 
-def test_dali_module_present(dali_hub: Hub) -> None:
+def test_dali_module_present(dali_hub: PLCHub) -> None:
     """Test if the Dali module is present."""
     assert 641 in [module.module_identifier for module in dali_hub.modules]
 
 
-def test_dali_module_io_type(dali_hub: Hub) -> None:
+def test_dali_module_io_type(dali_hub: PLCHub) -> None:
     """Test the IO type of the Dali module."""
     assert isinstance(dali_hub.modules["641"], Wg750DaliMaster), (
         "Dali module should be a Wg750DaliMaster"
@@ -40,7 +40,7 @@ def test_dali_module_io_type(dali_hub: Hub) -> None:
     )
 
 
-def test_dali_module_modbus_channel_spec(dali_hub: Hub) -> None:
+def test_dali_module_modbus_channel_spec(dali_hub: PLCHub) -> None:
     """Test the modbus channel specification of the Dali module."""
     assert "discrete" not in dali_hub.modules["641"].spec.modbus_channels, (
         "Dali module should not have any discrete channels"
@@ -56,7 +56,7 @@ def test_dali_module_modbus_channel_spec(dali_hub: Hub) -> None:
     )
 
 
-def test_dali_module_modbus_channels(dali_hub: Hub) -> None:
+def test_dali_module_modbus_channels(dali_hub: PLCHub) -> None:
     """Test the modbus channels of the Dali module."""
     assert len(dali_hub.modules["641"].modbus_channels["input"]) == 3, (
         "Dali module should have 3 input channels"
@@ -67,7 +67,7 @@ def test_dali_module_modbus_channels(dali_hub: Hub) -> None:
 
 
 def test_transmit_request_control_bit(
-    dali_hub: Hub, dali_modbus_mock: MockModbusTcpClientForDaliModule
+    dali_hub: PLCHub, dali_modbus_mock: MockModbusTcpClientForDaliModule
 ) -> None:
     """Test the transmit request control bit."""
     dali_modbus_mock.initialize_state()
@@ -94,7 +94,7 @@ def test_transmit_request_control_bit(
     )
 
 def test_dali_module_returns_correct_type_when_indexed(
-    dali_hub: Hub, dali_modbus_mock: MockModbusTcpClientForDaliModule
+    dali_hub: PLCHub, dali_modbus_mock: MockModbusTcpClientForDaliModule
 ) -> None:
     """Test the Dali module returns the correct type when indexed."""
     assert isinstance(dali_hub.modules["641"], Wg750DaliMaster), (
@@ -111,7 +111,7 @@ def test_dali_module_returns_correct_type_when_indexed(
     )
 
 def test_dali_command_query_short_address_present(
-    dali_hub: Hub, dali_modbus_mock: MockModbusTcpClientForDaliModule
+    dali_hub: PLCHub, dali_modbus_mock: MockModbusTcpClientForDaliModule
 ) -> None:
     """Test the query short address present command."""
     dali_modbus_mock.initialize_state()

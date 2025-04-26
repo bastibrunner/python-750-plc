@@ -7,14 +7,14 @@ from typing import Dict
 from pytest_subtests import SubTests
 import pytest
 
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.module import WagoModule
 logger = logging.getLogger(__name__)
 
 # Using fixtures from conftest.py now
 
 
-def test_module_digital_input_bits_match(configured_hub: Hub) -> None:
+def test_module_digital_input_bits_match(configured_hub: PLCHub) -> None:
     """Test if the digital input configuration matches the configured modules."""
     sum_bits_configured_modules: int = sum(
         i.spec.modbus_channels.get("discrete", 0)
@@ -30,7 +30,7 @@ def test_module_digital_input_bits_match(configured_hub: Hub) -> None:
     )
 
 
-def test_module_digital_output_bits_match(configured_hub: Hub) -> None:
+def test_module_digital_output_bits_match(configured_hub: PLCHub) -> None:
     """Test if the digital output configuration matches the configured modules."""
     sum_bits_configured_modules: int = sum(
         i.spec.modbus_channels.get("coil", 0)
@@ -46,7 +46,7 @@ def test_module_digital_output_bits_match(configured_hub: Hub) -> None:
     )
 
 
-def test_module_analog_input_bits_match(configured_hub: Hub) -> None:
+def test_module_analog_input_bits_match(configured_hub: PLCHub) -> None:
     """Test if the analog input configuration matches the configured modules."""
     sum_bits_configured_modules: int = (
         sum(
@@ -65,7 +65,7 @@ def test_module_analog_input_bits_match(configured_hub: Hub) -> None:
     )
 
 
-def test_module_analog_output_bits_match(configured_hub: Hub) -> None:
+def test_module_analog_output_bits_match(configured_hub: PLCHub) -> None:
     """Test if the analog output configuration matches the configured modules."""
     sum_bits_configured_modules: int = (
         sum(
@@ -84,7 +84,7 @@ def test_module_analog_output_bits_match(configured_hub: Hub) -> None:
     )
 
 
-def test_channel_count_match_all_modules(configured_hub: Hub) -> None:
+def test_channel_count_match_all_modules(configured_hub: PLCHub) -> None:
     """Test if the channel count matches the configured modules."""
     for module in configured_hub.modules:
         channels_spec: int = sum(module.spec.modbus_channels.values())
@@ -94,7 +94,7 @@ def test_channel_count_match_all_modules(configured_hub: Hub) -> None:
         )
 
 def test_module_returns_correct_type_when_indexed(
-    configured_hub: Hub
+    configured_hub: PLCHub
 ) -> None:
     """Test the Dali module returns the correct type when indexed."""
     assert isinstance(configured_hub.modules[0], WagoModule), (
@@ -118,7 +118,7 @@ def test_module_returns_correct_type_when_indexed(
         "All items in modules fetched by ID should be WagoModule instances"
     )
 
-def test_all_configured_modules_present(subtests: SubTests, configured_hub: Hub, modules: Dict[int, int]) -> None:
+def test_all_configured_modules_present(subtests: SubTests, configured_hub: PLCHub, modules: Dict[int, int]) -> None:
     """Test if all configured modules are present."""
     for module_id in modules:
         with subtests.test(f"Module {module_id} is present"):
@@ -144,7 +144,7 @@ def test_all_configured_modules_present(subtests: SubTests, configured_hub: Hub,
     ],
 )
 def test_module_addresses(
-    configured_hub: Hub, module_idx: int, modbus_channel_type: str, start_address: int
+    configured_hub: PLCHub, module_idx: int, modbus_channel_type: str, start_address: int
 ) -> None:
     """Test module addresses."""
     for index, channel in enumerate(

@@ -106,6 +106,8 @@ class Int8Out(WagoChannel):
         assert isinstance(value, int) and 0 <= value <= 255, (
             "Value must be an integer between 0 and 255"
         )
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         if self.byte_position == "LSB":
             self.modbus_channel.write_lsb(value)
         else:
@@ -113,6 +115,8 @@ class Int8Out(WagoChannel):
 
     def read(self) -> int:
         """Read the value of the channel."""
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         return (
             self.modbus_channel.read_lsb()
             if self.byte_position == "LSB"

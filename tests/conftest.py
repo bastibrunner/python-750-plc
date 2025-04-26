@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from wg750xxx.settings import HubConfig
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 from .mock.mock_modbus_tcp_client_for_dali_module import MockModbusTcpClientForDaliModule
@@ -78,7 +78,7 @@ def dali_modbus_mock() -> Generator[MockModbusTcpClientForDaliModule, None, None
 
 
 @pytest.fixture(scope="module")
-def basic_hub(modbus_mock: MockModbusTcpClient) -> Generator[Hub, None, None]:
+def basic_hub(modbus_mock: MockModbusTcpClient) -> Generator[PLCHub, None, None]:
     """Set up a basic hub with no modules.
 
     Args:
@@ -88,14 +88,14 @@ def basic_hub(modbus_mock: MockModbusTcpClient) -> Generator[Hub, None, None]:
         A Hub instance with no modules
     """
     modbus_settings = HubConfig(host="dummy", port=502)
-    hub_instance = Hub(modbus_settings, initialize=False)
+    hub_instance = PLCHub(modbus_settings, initialize=False)
     hub_instance.connect()
     hub_instance.initialize(discovery=False)
     yield hub_instance
 
 
 @pytest.fixture(scope="module")
-def configured_hub(modbus_mock_with_modules: MockModbusTcpClient) -> Generator[Hub, None, None]:
+def configured_hub(modbus_mock_with_modules: MockModbusTcpClient) -> Generator[PLCHub, None, None]:
     """Set up a hub with specific module configuration.
 
     Args:
@@ -106,7 +106,7 @@ def configured_hub(modbus_mock_with_modules: MockModbusTcpClient) -> Generator[H
     """
     modbus_settings = HubConfig(host="dummy", port=502)
     # Initialize the hub with the modbus settings but don't automatically initialize
-    hub_instance = Hub(modbus_settings, initialize=False)
+    hub_instance = PLCHub(modbus_settings, initialize=False)
     # Manually connect the hub (this will set up the client)
     hub_instance.connect()
     # Now run the full initialization
@@ -124,7 +124,7 @@ def configured_hub(modbus_mock_with_modules: MockModbusTcpClient) -> Generator[H
 
 
 @pytest.fixture(scope="module")
-def dali_hub(dali_modbus_mock: MockModbusTcpClientForDaliModule) -> Generator[Hub, None, None]:
+def dali_hub(dali_modbus_mock: MockModbusTcpClientForDaliModule) -> Generator[PLCHub, None, None]:
     """Create a hub with the DALI-specific ModbusTcpClient mock.
 
     Args:
@@ -135,7 +135,7 @@ def dali_hub(dali_modbus_mock: MockModbusTcpClientForDaliModule) -> Generator[Hu
     """
     modbus_settings = HubConfig(host="dummy", port=502)
     # Initialize the hub with the modbus settings but don't automatically initialize
-    hub_instance = Hub(modbus_settings, initialize=False)
+    hub_instance = PLCHub(modbus_settings, initialize=False)
     # Manually connect the hub (this will set up the client)
     hub_instance.connect()
     # Now run the full initialization

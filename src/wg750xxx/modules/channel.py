@@ -2,10 +2,13 @@
 
 import logging
 import time
-from typing import Any, Literal, Callable, Self
+from typing import Any, Literal, Self
+from collections.abc import Callable
 
-from ..settings import ChannelConfig
+
+from ..const import DEFAULT_SCAN_INTERVAL
 from ..modbus.state import ModbusChannel
+from ..settings import ChannelConfig
 
 log = logging.getLogger(__name__)
 
@@ -52,14 +55,14 @@ class WagoChannel:
         modbus_channel: ModbusChannel | None = None,
         config: ChannelConfig | None = None,
         channel_index: int | None = None,
-        on_change_callback: Callable[[Any], None] | None = None,
+        on_change_callback: Callable[[Any, Any | None], None] | None = None,
         update_interval: int | None = None,
         module_id: str | None = None,
     ) -> None:
         """Initialize the channel."""
         self.channel_type: Literal[WagoChannelType] = channel_type
         self.modbus_channel: ModbusChannel | None = modbus_channel
-        self.update_interval: int | None = update_interval or 100
+        self.update_interval: int | None = update_interval or DEFAULT_SCAN_INTERVAL
         self._last_update: float = 0
         self.module_id: str | None = module_id
         log.debug("Initializing channel %s", self.__repr__())
@@ -76,7 +79,7 @@ class WagoChannel:
             value_template=self.value_template,
             update_interval=self.update_interval,
         )
-        self._on_change_callback: Callable[[Any], None] | None = on_change_callback
+        self._on_change_callback: Callable[[Any, Any | None], None] | None = on_change_callback
 
     def auto_generated_name(self) -> str:
         """Generate a name for the channel."""
@@ -156,12 +159,12 @@ class WagoChannel:
         self._config = config
 
     @property
-    def on_change_callback(self) -> Callable[[Any], None] | None:
+    def on_change_callback(self) -> Callable[[Any, Any | None], None] | None:
         """Get the callback function that gets called when the channel value changes."""
         return self._on_change_callback
 
     @on_change_callback.setter
-    def on_change_callback(self, callback: Callable[[Any], None] | None) -> None:
+    def on_change_callback(self, callback: Callable[[Any, Any | None], None] | None) -> None:
         """Set the callback function that gets called when the channel value changes."""
         self._on_change_callback = callback
 

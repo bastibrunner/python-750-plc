@@ -5,7 +5,7 @@ import logging
 
 import pytest
 
-from wg750xxx.hub import Hub, ControllerInfo
+from wg750xxx.wg750xxx import PLCHub, ControllerInfo
 from wg750xxx.settings import HubConfig, ModuleConfig
 from wg750xxx.modbus.state import ModbusConnection
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Using fixtures from conftest.py
 
 
-def test_controller_info_read(basic_hub: Hub) -> None:
+def test_controller_info_read(basic_hub: PLCHub) -> None:
     """Test that controller info is read correctly."""
     controller_info = basic_hub.info
 
@@ -32,7 +32,7 @@ def test_controller_info_read(basic_hub: Hub) -> None:
 def test_controller_connection(modbus_mock: MockModbusTcpClient) -> None:
     """Test controller connection and disconnection."""
     modbus_settings = HubConfig(host="dummy", port=502)
-    hub = Hub(modbus_settings, initialize=False)
+    hub = PLCHub(modbus_settings, initialize=False)
 
     # Test initial state
     assert not hub.is_connected, "Hub should not be connected initially"
@@ -53,7 +53,7 @@ def test_controller_connection(modbus_mock: MockModbusTcpClient) -> None:
 def test_controller_initialization(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test controller initialization."""
     modbus_settings = HubConfig(host="dummy", port=502)
-    hub = Hub(modbus_settings, initialize=False)
+    hub = PLCHub(modbus_settings, initialize=False)
 
     assert not hub.is_initialized, "Hub should not be initialized initially"
 
@@ -72,7 +72,7 @@ def test_controller_initialization(modbus_mock_with_modules: MockModbusTcpClient
 def test_controller_run_discovery(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test controller module discovery."""
     modbus_settings = HubConfig(host="dummy", port=502)
-    hub = Hub(modbus_settings, initialize=False)
+    hub = PLCHub(modbus_settings, initialize=False)
     hub.connect()
 
     # Run discovery
@@ -82,7 +82,7 @@ def test_controller_run_discovery(modbus_mock_with_modules: MockModbusTcpClient)
     assert len(hub.modules) > 0, "Modules should be discovered"
 
 
-def test_controller_module_access(configured_hub: Hub) -> None:
+def test_controller_module_access(configured_hub: PLCHub) -> None:
     """Test accessing modules through the controller."""
     # Test access by index
     assert len(configured_hub.modules) > 0, "Hub should have modules"
@@ -105,7 +105,7 @@ def test_controller_config(modbus_mock: MockModbusTcpClient) -> None:
     """Test controller configuration."""
     # Test with HubConfig
     modbus_settings = HubConfig(host="test_server", port=1234)
-    hub = Hub(modbus_settings, initialize=False)
+    hub = PLCHub(modbus_settings, initialize=False)
 
     assert hub.config.host == "test_server", "Server should be set correctly"
     assert hub.config.port == 1234, "Port should be set correctly"
@@ -126,7 +126,7 @@ def test_controller_config(modbus_mock: MockModbusTcpClient) -> None:
 
 def test_controller_config_with_none(modbus_mock: MockModbusTcpClient) -> None:
     """Test controller configuration with None."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=False)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
         hub.config = None # type: ignore
@@ -134,18 +134,18 @@ def test_controller_config_with_none(modbus_mock: MockModbusTcpClient) -> None:
 
 def test_controller_config_with_invalid_config(modbus_mock: MockModbusTcpClient) -> None:
     """Test controller configuration with invalid config."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=False)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
         hub.config = "invalid_config" # type: ignore
 
 def test_controller_module_config(modbus_mock: MockModbusTcpClient) -> None:
     """Test controller module config."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=False)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
     hub.config = HubConfig(host="dummy", port=502, modules=[ModuleConfig(name="test_module", type="test_type", index=0)])
     assert hub.config is not None, "Config should not be None"
 
-def test_controller_process_state_width(configured_hub: Hub) -> None:
+def test_controller_process_state_width(configured_hub: PLCHub) -> None:
     """Test controller process state width calculation."""
     # The process state width should match the sum of the module channel counts
     total_discrete = sum(
@@ -188,7 +188,7 @@ def test_controller_process_state_width(configured_hub: Hub) -> None:
 def test_controller_setup_basic_test_modules(modbus_mock: MockModbusTcpClient) -> None:
     """Test the _setup_basic_test_modules method."""
     modbus_settings = HubConfig(host="dummy", port=502)
-    hub = Hub(modbus_settings, initialize=False)
+    hub = PLCHub(modbus_settings, initialize=False)
     hub.connect()
 
     # Since this is a protected method, we need to call it directly

@@ -88,7 +88,7 @@ class Modules:
         return str(self._modules)
 
 
-class Hub:
+class PLCHub:
     """The main class for the Wago 750 Modbus TCP server.
 
     Args:

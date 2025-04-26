@@ -5,7 +5,7 @@ from enum import Enum
 import time
 from typing import Any, Callable, Optional, Set, Self
 
-from wg750xxx.modbus.state import Coil, Discrete
+from ...modbus.state import Coil, Discrete
 from ..channel import WagoChannel
 from ..exceptions import WagoModuleError
 
@@ -138,7 +138,7 @@ class EventButton(DigitalIn):
         self._press_start_time: Optional[float] = None
         self._current_press_duration: float = 0
         self._last_event: Optional[DigitalEvent] = None
-        self._raw_callback: Optional[Callable[[Any], None]] = None
+        self._raw_callback: Optional[Callable[[Any, Any | None], None]] = None
         self._last_state_change_time: float = 0
         self._pending_tasks: Set[asyncio.Task] = set()
         self._current_event: DigitalEvent | None = None
@@ -252,7 +252,7 @@ class EventButton(DigitalIn):
         self.notify_value_change(event.value)
 
     @property
-    def on_change_callback(self) -> Callable[[Any], None] | None:
+    def on_change_callback(self) -> Callable[[Any, Any | None], None] | None:
         """Get the callback function.
 
         Returns:
@@ -261,7 +261,7 @@ class EventButton(DigitalIn):
         return self._raw_callback
 
     @on_change_callback.setter
-    def on_change_callback(self, callback: Callable[[Any], None] | None) -> None:
+    def on_change_callback(self, callback: Callable[[Any, Any | None], None] | None) -> None:
         """Set the callback function that gets called when an event is detected.
 
         Args:
@@ -291,6 +291,3 @@ class EventButton(DigitalIn):
                 callback(new_value, self)
             else:
                 raise ValueError(f"Callback function {callback.__name__} has {callback.__code__.co_argcount} arguments, expected 1 or 2")
-        # else:
-        #     # For MagicMock or other callable objects without __code__
-        #     callback(new_value)

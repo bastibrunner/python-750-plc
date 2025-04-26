@@ -1,8 +1,8 @@
 """Dali module."""
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Callable
 import time
-from typing import ClassVar, cast, Any, Callable
+from typing import ClassVar, cast, Any
 
 from homeassistant.core import logging
 
@@ -99,12 +99,12 @@ class Wg750DaliMaster(WagoModule):
             )
 
     @property
-    def on_change_callback(self) -> Callable[[Any], None] | None:
+    def on_change_callback(self) -> Callable[[Any, Any | None], None] | None:
         """Get the callback function that gets called when the channel value changes."""
         return self._on_change_callback
 
     @on_change_callback.setter
-    def on_change_callback(self, callback: Callable[[Any], None] | None) -> None:
+    def on_change_callback(self, callback: Callable[[Any, Any | None], None] | None) -> None:
         """Set the callback function that gets called when the channel value changes."""
         self._on_change_callback = callback
 

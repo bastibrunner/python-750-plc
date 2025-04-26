@@ -5,7 +5,7 @@ import logging
 import re
 import pytest
 
-from wg750xxx.hub import Hub, ControllerInfo
+from wg750xxx.wg750xxx import PLCHub, ControllerInfo
 from wg750xxx.modules.exceptions import WagoModuleError
 from wg750xxx.settings import HubConfig, ModuleConfig, ChannelConfig
 from wg750xxx.modbus.state import ModbusConnection
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def test_channel_config_without_config(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test channel config without config."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=True)
     assert len(hub.modules[0].channels) == 0, "Should have 0 channels"
     assert len(hub.modules[1].channels) == 4, "Should have 4 channels"
     expected_channel_names = re.compile(r"(\w+ )+\d+")
@@ -35,7 +35,7 @@ def test_channel_config_without_config(modbus_mock_with_modules: MockModbusTcpCl
 
 def test_channel_config_with_matching_config(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test module config with mismatching config."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=True)
     modules_config = []
     for i,module in enumerate(hub.modules):
         channels_config = []
@@ -79,7 +79,7 @@ def test_channel_config_with_matching_config(modbus_mock_with_modules: MockModbu
             assert channel.config.platform == "Test Platform", f"Channel {j} should have platform Test Platform"
 
 
-    hub = Hub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
 
     assert len(hub.modules[0].channels) == 0, "Should have 4 channels"
     assert len(hub.modules[1].channels) == 4, "Should have 4 channels"

@@ -10,7 +10,7 @@ import time
 from typing import Any
 import yaml
 from wg750xxx.settings import HubConfig
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.channel import WagoChannel
 
 def on_change_callback(new_value: Any, channel: WagoChannel) -> None:
@@ -26,7 +26,7 @@ def main() -> None:
     log.addHandler(logging.StreamHandler(sys.stdout))
 
 
-    hub = Hub(HubConfig(host="10.22.22.16", port=502), True)
+    hub = PLCHub(HubConfig(host="10.22.22.16", port=502), True)
     print(yaml.dump({"modules": [str(m.module_identifier) for m in hub.modules]}, indent=2))
 
     for module in hub.modules:

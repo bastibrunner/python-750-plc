@@ -5,7 +5,7 @@ import logging
 
 import pytest
 
-from wg750xxx.hub import Hub, ControllerInfo
+from wg750xxx.wg750xxx import PLCHub, ControllerInfo
 from wg750xxx.modules.exceptions import WagoModuleError
 from wg750xxx.settings import HubConfig, ModuleConfig
 from wg750xxx.modbus.state import ModbusConnection
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def test_module_config_with_no_modules(modbus_mock: MockModbusTcpClient) -> None:
     """Test module config with no config and initialize false."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=False)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
     assert hub.config.modules == [], "Config should be empty"
     hub.initialize()
     hub.run_discovery()
@@ -29,7 +29,7 @@ def test_module_config_with_no_modules(modbus_mock: MockModbusTcpClient) -> None
 
 def test_module_config_with_no_config_and_initialize_false(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test module config with no config and initialize false."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=False)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
     assert hub.config.modules == [], "Config should be empty"
     hub.initialize(discovery=False)
     assert len(hub.modules) == 0, "Should have 0 modules after initialization with discovery false"
@@ -38,7 +38,7 @@ def test_module_config_with_no_config_and_initialize_false(modbus_mock_with_modu
 
 def test_module_config_with_no_config_and_initialize_true(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test module config with no config and initialize true."""
-    hub = Hub(HubConfig(host="dummy", port=502), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502), initialize=True)
     assert len(hub.modules) == 13, "Should have 13 modules"
     assert len(hub.config.modules) == 13, "Config should have 13 modules"
 
@@ -59,7 +59,7 @@ def test_module_config_with_matching_config(modbus_mock_with_modules: MockModbus
         ModuleConfig(name="test_module_12", type="404", index=11, update_interval=111, channels=[]),
         ModuleConfig(name="test_module_13", type="DI", index=12, update_interval=112, channels=[]),
     ]
-    hub = Hub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
     assert len(hub.modules) == 13, "Should have 13 modules"
     assert len(hub.config.modules) == 13, "Config should have 13 modules"
     assert hub.modules[0].name == "test_module_1", "Module 1 should have name test_module_1"
@@ -118,7 +118,7 @@ def test_module_config_with_mismatching_config_typemismatch(modbus_mock_with_mod
         ModuleConfig(name="test_module_13", type="wrong_type"),
     ]
     with pytest.raises(WagoModuleError):
-        _hub = Hub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
+        _hub = PLCHub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
 
 def test_module_config_with_mismatching_config_indexmismatch(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test module config with mismatching config."""
@@ -138,7 +138,7 @@ def test_module_config_with_mismatching_config_indexmismatch(modbus_mock_with_mo
         ModuleConfig(name="test_module_13", type="DI", index=0, update_interval=112, channels=[]),
     ]
     with pytest.raises(ValueError):
-        _hub = Hub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
+        _hub = PLCHub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
 
 def test_module_config_with_mismatching_config_too_short(modbus_mock_with_modules: MockModbusTcpClient) -> None:
     """Test module config with mismatching config."""
@@ -148,7 +148,7 @@ def test_module_config_with_mismatching_config_too_short(modbus_mock_with_module
         ModuleConfig(name="test_module_3", type="559", index=2, update_interval=102, channels=[]),
         ModuleConfig(name="test_module_4", type="DO", index=3, update_interval=103, channels=[]),
     ]
-    hub = Hub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
     assert len(hub.modules) == 13, "Should have 13 modules"
     assert hub.modules[0].name == "test_module_1", "Module 1 should have name test_module_1"
     assert hub.modules[1].name == "test_module_2", "Module 2 should have name test_module_2"
@@ -183,7 +183,7 @@ def test_module_config_with_mismatching_config_too_long(modbus_mock_with_modules
         ModuleConfig(name="test_module_13", type="DI", index=12, update_interval=112, channels=[]),
         ModuleConfig(name="test_module_14", type="DI", index=13, update_interval=113, channels=[]),
     ]
-    hub = Hub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
+    hub = PLCHub(HubConfig(host="dummy", port=502, modules=modules_config), initialize=True)
     assert len(hub.modules) == 13, "Should have 13 modules"
     assert hub.modules[0].name == "test_module_1", "Module 1 should have name test_module_1"
     assert hub.modules[1].name == "test_module_2", "Module 2 should have name test_module_2"

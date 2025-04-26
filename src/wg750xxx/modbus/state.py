@@ -10,6 +10,8 @@ from typing import Any, ClassVar, Literal, Self, TYPE_CHECKING
 
 from pymodbus.client import ModbusTcpClient
 
+from ..const import DEFAULT_SCAN_INTERVAL
+
 from .registers import Bits, Words
 from .exceptions import ModbusCommunicationError
 
@@ -120,7 +122,7 @@ class ModbusConnection:
     """
 
     def __init__(
-        self, modbus_tcp_client: ModbusTcpClient, bits_in_state: ModbusChannelSpec, update_interval: int = 100
+        self, modbus_tcp_client: ModbusTcpClient, bits_in_state: ModbusChannelSpec, update_interval: int = DEFAULT_SCAN_INTERVAL
     ) -> None:
         """Initialize the ModbusConnection.
 
@@ -355,7 +357,7 @@ class ModbusConnection:
                 for state_type, interval in self._update_intervals.items():
                     if (
                         current_time - self._last_updates[state_type]
-                        >= interval
+                        >= interval / 1000
                     ):
                         log.debug("Updating %s state", state_type)
                         update_counter[state_type] += 1
@@ -367,32 +369,32 @@ class ModbusConnection:
                     last_log_time = current_time
 
                 # Sleep for a short time to prevent excessive CPU usage
-                # Use the smallest interval as the sleep time, but minimum 0.1 second
+                # Use the smallest interval as the sleep time, but minimum 0.01 second
                 min_interval = min(self._update_intervals.values())
-                time.sleep(min(min_interval / 10, 0.01))
+                time.sleep(min(min_interval / 1000, 0.01))
 
             except Exception as e: # pylint: disable=broad-exception-caught
-                # TODO: Catch only specific exceptions
+                # TODO: Dont catch broad exception
                 log.error("Error in continuous update thread: %s", e)
                 time.sleep(0.5)  # Pause briefly after an error
 
     def start_continuous_update(
         self,
-        interval: float | None = None,
-        input_interval: float | None = None,
-        holding_interval: float | None = None,
-        discrete_interval: float | None = None,
-        coil_interval: float | None = None,
+        interval: int | None = None,
+        input_interval: int | None = None,
+        holding_interval: int | None = None,
+        discrete_interval: int | None = None,
+        coil_interval: int | None = None,
     ) -> None:
         """Start a thread that continuously updates the Modbus state.
 
         Args:
-            interval: Time in seconds between updates for all state types.
+            interval: Time in milliseconds between updates for all state types.
                     If specified, overrides all individual settings.
-            input_interval: Time in seconds between input register updates.
-            holding_interval: Time in seconds between holding register updates.
-            discrete_interval: Time in seconds between discrete input updates.
-            coil_interval: Time in seconds between coil updates.
+            input_interval: Time in milliseconds between input register updates.
+            holding_interval: Time in milliseconds between holding register updates.
+            discrete_interval: Time in milliseconds between discrete input updates.
+            coil_interval: Time in milliseconds between coil updates.
 
         """
         if self._update_thread is not None and self._update_thread.is_alive():
@@ -420,20 +422,20 @@ class ModbusConnection:
 
     def set_update_interval(
         self,
-        interval: float | None = None,
-        input_interval: float | None = None,
-        holding_interval: float | None = None,
-        discrete_interval: float | None = None,
-        coil_interval: float | None = None,
+        interval: int | None = None,
+        input_interval: int | None = None,
+        holding_interval: int | None = None,
+        discrete_interval: int | None = None,
+        coil_interval: int | None = None,
     ) -> None:
         """Set the update interval for the continuous update thread.
 
         Args:
-            interval: Time in seconds between updates for all state types.
-            input_interval: Time in seconds between input register updates.
-            holding_interval: Time in seconds between holding register updates.
-            discrete_interval: Time in seconds between discrete input updates.
-            coil_interval: Time in seconds between coil updates.
+            interval: Time in milliseconds between updates for all state types.
+            input_interval: Time in milliseconds between input register updates.
+            holding_interval: Time in milliseconds between holding register updates.
+            discrete_interval: Time in milliseconds between discrete input updates.
+            coil_interval: Time in milliseconds between coil updates.
 
         """
         # Set individual intervals if provided
@@ -479,7 +481,7 @@ class ModbusConnection:
 
         log.info("Stopping continuous update thread")
         self._running = False
-        self._update_thread.join(timeout=2 * min(self._update_intervals.values()))
+        self._update_thread.join(timeout=2 * min(self._update_intervals.values()) / 1000)
         if self._update_thread.is_alive():
             log.warning("Continuous update thread did not terminate gracefully")
         self._update_thread = None

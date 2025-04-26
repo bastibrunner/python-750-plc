@@ -7,7 +7,7 @@ import re
 
 import pytest
 
-from wg750xxx.hub import Hub
+from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.counter.modules import Wg750Counter
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 CounterModuleTypes = (Wg750Counter,)
 
 
-def test_counter_modules_created(configured_hub: Hub) -> None:
+def test_counter_modules_created(configured_hub: PLCHub) -> None:
     """Test that counter modules are created correctly."""
     # Find counter modules based on their aliases (typically include "counter")
     counter_modules = []
@@ -39,7 +39,7 @@ def test_counter_modules_created(configured_hub: Hub) -> None:
                 f"Channel {channel} has incorrect type {channel.channel_type}"
 
 
-def test_counter_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub) -> None:
+def test_counter_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
     """Test reading from counter channels."""
     # Find counter modules
     counter_modules = []
@@ -66,7 +66,7 @@ def test_counter_channel_read(modbus_mock_with_modules: MockModbusTcpClient, con
 
 
 @pytest.mark.skip(reason="Skipping counter reset test, it's not implemented in modbus_mock")
-def test_counter_channel_reset(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub) -> None:
+def test_counter_channel_reset(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
     """Test counter reset functionality if available."""
     # Find counter modules
     counter_modules = []
@@ -94,7 +94,7 @@ def test_counter_channel_reset(modbus_mock_with_modules: MockModbusTcpClient, co
 
 
 def test_counter_channel_callbacks(
-    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
 ) -> None:
     """Test that counter channel callbacks work correctly."""
     # Find counter modules
@@ -138,7 +138,7 @@ def test_counter_channel_callbacks(
     test_channel.on_change_callback = None
 
 
-def test_counter_channel_config(configured_hub: Hub) -> None:
+def test_counter_channel_config(configured_hub: PLCHub) -> None:
     """Test counter channel configuration."""
     # Find counter modules
     counter_modules = []
@@ -161,7 +161,7 @@ def test_counter_channel_config(configured_hub: Hub) -> None:
             assert expected_name.match(channel.auto_generated_name()), f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
 
 
-def test_32bit_counter_values(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: Hub) -> None:
+def test_32bit_counter_values(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
     """Test 32-bit counter values if available."""
     # Find counter modules
     counter_modules = []
