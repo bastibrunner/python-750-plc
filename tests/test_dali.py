@@ -6,7 +6,7 @@ import logging
 from typing import cast, List
 
 from wg750xxx.hub import Hub
-from wg750xxx.modules.dali.dali_commands import DaliCommands
+from wg750xxx.modules.dali.module_setup import ModuleSetup
 from wg750xxx.modules.dali.dali_communication import DaliOutputMessage
 from wg750xxx.modules.dali.modules import Wg750DaliMaster, DaliChannel
 
@@ -26,6 +26,9 @@ def test_dali_module_present(dali_hub: Hub) -> None:
 
 def test_dali_module_io_type(dali_hub: Hub) -> None:
     """Test the IO type of the Dali module."""
+    assert isinstance(dali_hub.modules["641"], Wg750DaliMaster), (
+        "Dali module should be a Wg750DaliMaster"
+    )
     assert not dali_hub.modules["641"].spec.io_type.digital, (
         "Dali should not be digital"
     )
@@ -113,7 +116,7 @@ def test_dali_command_query_short_address_present(
     """Test the query short address present command."""
     dali_modbus_mock.initialize_state()
     dali_hub.connection.update_state()
-    command: DaliCommands = DaliCommands(
+    command: ModuleSetup = ModuleSetup(
         cast(
             Wg750DaliMaster, dali_hub.modules["641"][0]
         ).dali_communication_register

@@ -5,15 +5,14 @@ import logging
 
 from .dali_communication import (
     DaliCommunicationRegister,
-    DaliInputMessage,
     DaliOutputMessage,
 )
-from .misc import iterate_bits
+from .misc import dali_response_to_channel_list
 
 log = logging.getLogger(__name__)
 
 
-class DaliCommands:
+class ModuleSetup:
     """DALI commands."""
 
     def __init__(self, dali_communication_register: DaliCommunicationRegister) -> None:
@@ -37,7 +36,7 @@ class DaliCommands:
         """Query short address present."""
         channels = []
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x06), response=True
                 ),
@@ -45,7 +44,7 @@ class DaliCommands:
             )
         )
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x07), response=True
                 ),
@@ -60,14 +59,14 @@ class DaliCommands:
         """Query status vorschaltgerät."""
         channels = []
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x08), response=True
                 )
             )
         )
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x09), response=True
                 )
@@ -80,14 +79,14 @@ class DaliCommands:
         """Query lamp failure."""
         channels = []
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x0A), response=True
                 )
             )
         )
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x0B), response=True
                 )
@@ -100,14 +99,14 @@ class DaliCommands:
         """Query lamp power on."""
         channels = []
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x0C), response=True
                 )
             )
         )
         channels.extend(
-            self._dali_response_to_channel_list(
+            dali_response_to_channel_list(
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x0D), response=True
                 )
@@ -154,66 +153,17 @@ class DaliCommands:
             )
         )
 
-    # 18. Senden der Device Type spezifischen DALI-Befehle
-    def send_device_type_specific_dali_commands(self) -> None:
-        """Send device type specific DALI commands."""
-        self.dali_communication_register.write(
-            DaliOutputMessage(command_extension=0x12)
-        )
-
-    # 19. Rückantworten auf QUERY ACTUAL LEVEL Geräte 56 bis 59
-    def query_actual_level_device_56_to_59(self) -> None:
-        """Query actual level device 56 to 59."""
-        self.dali_communication_register.write(
-            DaliOutputMessage(command_extension=0x13), response=True
-        )
-
-    # 20. Rückantworten auf QUERY ACTUAL LEVEL Geräte 60 bis 63
-    def query_actual_level_device_60_to_63(self) -> None:
-        """Query actual level device 60 to 63."""
-        self.dali_communication_register.write(
-            DaliOutputMessage(command_extension=0x14), response=True
-        )
-
     # 21. Abfragen der Level-Poll-Periode
-    def set_level_poll_period(self, period: int) -> None:
-        """Set level poll period."""
-        self.dali_communication_register.write(
-            DaliOutputMessage(command_extension=0x15, parameter_1=period), response=True
-        )
-
-    # 22. Setzen der Level-Poll-Periode
-    def get_level_poll_period(self) -> None:
+    @property
+    def level_poll_period(self) -> int:
         """Get level poll period."""
-        self.dali_communication_register.write(
+        return self.dali_communication_register.write(
             DaliOutputMessage(command_extension=0x16), response=True
         )
 
-    # 23. Abfragen der Hard- und Softwareversion
-    def query_hard_and_software_version(self) -> None:
-        """Query hard and software version."""
-        return self.dali_communication_register.write(
-            DaliOutputMessage(command_extension=0x17), response=True
+    @level_poll_period.setter
+    def level_poll_period(self, period: int) -> None:
+        """Set level poll period."""
+        self.dali_communication_register.write(
+            DaliOutputMessage(command_extension=0x15, parameter_1=period)
         )
-
-    # 36. Schnellabfragen des Netzwerk-Status
-    def query_network_status(self) -> None:
-        """Query network status."""
-        return self.dali_communication_register.write(
-            DaliOutputMessage(command_extension=0x36), response=True
-        )
-
-    def _dali_response_to_channel_list(
-        self, response: DaliInputMessage | None, offset: int = 0
-    ) -> list[int]:
-        """Convert DALI response to channel list."""
-        channels = []
-        if response is None:
-            return channels
-        channels.extend(
-            [offset + i for bit, i in iterate_bits(response.dali_response) if bit]
-        )
-        channels.extend([offset + 8 + i for bit, i in iterate_bits(response.message_3) if bit])
-        channels.extend([offset + 16 + i for bit, i in iterate_bits(response.message_2) if bit])
-        channels.extend([offset + 24 + i for bit, i in iterate_bits(response.message_1) if bit])
-        return channels

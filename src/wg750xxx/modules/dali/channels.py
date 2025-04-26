@@ -4,7 +4,7 @@
 from typing import Any
 
 from ..channel import WagoChannel
-from .dali_channel_commands import DaliChannelCommands
+from .channel_commands import DaliChannelCommands
 from .dali_communication import DaliCommunicationRegister
 
 

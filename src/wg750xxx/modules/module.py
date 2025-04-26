@@ -14,7 +14,7 @@ from ..modbus.state import (
     ModbusConnection,
 )
 from .spec import ModuleSpec
-from ..settings import ModuleConfig
+from ..settings import ModuleConfig, ChannelConfig
 
 log = logging.getLogger(__name__)
 
@@ -117,15 +117,13 @@ class WagoModule:
         self.modbus_connection: ModbusConnection = modbus_connection
         self._modbus_address: AddressDict | None = None
         self._display_name: str | None = None
-
+        self._channel_init_config: list[ChannelConfig] | None = None
+        self.polling_interval: int = 0
         log.debug("Initializing module %s", self.__repr__())
 
         if module_identifier is not None:
             self.module_identifier = module_identifier
 
-        self._init_config: ModuleConfig | None = config
-        if config is not None:
-            self.config = config
         self.index: int = index
         self._modbus_channels: dict[ModbusChannelType, list[ModbusChannel]] = {
             "coil": [],
@@ -137,10 +135,15 @@ class WagoModule:
         if modbus_address is not None:
             self.modbus_address = modbus_address
 
-        self.channel: list[WagoChannel] | None = None
+        self.channels: list[WagoChannel] | None = None
+        self.config: ModuleConfig | None = config
+        if self.config is not None and self.config.index != index:
+            raise ValueError(
+                f"Module index {index} does not match config index {self.config.index}"
+            )
         self.auto_create_channels = auto_create_channels
         if self.auto_create_channels:
-            self.channel = []
+            self.channels = []
             try:
                 self.create_channels()
             except NotImplementedError:
@@ -217,28 +220,41 @@ class WagoModule:
     @property
     def config(self) -> ModuleConfig:
         """Get the configuration of the module."""
-        self._config.index = self.index
-        self._config.name = self.display_name
-        self._config.channels = (
-            [channel.config for channel in self.channel]
-            if self.channel is not None
-            else None
-        )
+        if not hasattr(self, '_config') or self._config is None:
+            self._config = ModuleConfig(
+                index=self.index,
+                type=self.spec.module_type,
+                name=self.display_name or self.spec.module_type,
+                polling_interval=self.polling_interval,
+                channels=[channel.config for channel in self.channels] if self.channels is not None else None
+            )
+        else:
+            self._config.index = self.index
+            self._config.name = self.display_name or self.spec.module_type
+            self._config.channels = (
+                [channel.config for channel in self.channels]
+                if self.channels is not None
+                else None
+            )
         return self._config
 
     @config.setter
-    def config(self, config: ModuleConfig) -> None:
+    def config(self, config: ModuleConfig | None) -> None:
         """Set the configuration of the module.
 
         This will also set the display name, index and config.
         """
-        if config.type not in list(self.aliases):
-            raise WagoModuleError(
-                f"Module type {config.type} does not match {self.spec.module_type}"
-            )
-        self._display_name = config.name or self.display_name
-        self.index = config.index
-        self._config = config
+        if config is not None:
+            if config.type not in list(self.aliases):
+                raise WagoModuleError(
+                    f"Module type {config.type} does not match {self.spec.module_type}"
+                )
+            self._display_name = config.name or self.display_name
+            self.index = config.index
+            self._channel_init_config = config.channels
+            self._config = config
+        else:
+            self._config = self.config
 
     @property
     def name(self) -> str:
@@ -259,30 +275,29 @@ class WagoModule:
 
     def append_channel(self, channel: WagoChannel) -> None:
         """Append a channel to the module."""
-        channel_init_config = (
-            self._init_config.channels if self._init_config is not None else None
-        )
         # Channel index is the index of the current array position
-        channel.channel_index = len(self.channel)
-        if channel_init_config is not None:
-            if channel.channel_index < len(channel_init_config):
+        channel.channel_index = len(self.channels)
+        if self._channel_init_config is not None:
+            if channel.channel_index < len(self._channel_init_config):
                 if (
-                    channel_init_config[channel.channel_index].type
+                    self._channel_init_config[channel.channel_index].type
                     != channel.channel_type
                 ):
                     raise ValueError(
-                        f"""Channel type {channel_init_config[channel.channel_index].type} reported from
+                        f"""Channel type {self._channel_init_config[channel.channel_index].type} reported from
                         hub does not match channel type {channel.channel_type} specified in config"""
                     )
-                channel.name = channel_init_config[channel.channel_index].name
-            elif channel.channel_index >= len(channel_init_config):
+                channel.name = self._channel_init_config[channel.channel_index].name
+            elif channel.channel_index > len(self._channel_init_config):
                 log.warning(
                     "More channels found (%d) in module %s than configured in config (%d). Check module configuration and update config.",
                     channel.channel_index + 1,
                     self.display_name,
-                    len(channel_init_config),
+                    len(self._channel_init_config),
                 )
-        self.channel.append(channel)
+            else:
+                channel.config = self._channel_init_config[channel.channel_index]
+        self.channels.append(channel.get_instance())
 
     def _reset_modbus_channel_configuration(self) -> None:
         """Reset the channel configuration."""

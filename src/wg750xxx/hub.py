@@ -105,7 +105,7 @@ class Hub:
 
     _first_address: AddressDict = {"coil": 0, "discrete": 0, "input": 0, "holding": 0}
 
-    def __init__(self, config: HubConfig | ModbusSettings, initialize: bool = True) -> None:
+    def __init__(self, config: HubConfig, initialize: bool = True) -> None:
         """Initialize the hub."""
         self.config = config
         self.modules: Modules = Modules()
@@ -377,23 +377,15 @@ class Hub:
         return HubConfig(
             host=self._modbus_host,
             port=self._modbus_port,
-            modules=[module.config for module in self.modules],
-            modules_dict={module.config.id: module.config for module in self.modules},
+            modules=[module.config for module in self.modules]
         )
 
     @config.setter
-    def config(self, config: HubConfig | ModbusSettings) -> None:
+    def config(self, config: HubConfig) -> None:
         """Set the config of the hub."""
-        if hasattr(config, 'host'):
+        if isinstance(config, HubConfig):
             self._modbus_host = config.host
-        elif hasattr(config, 'server'):
-            self._modbus_host = config.server
-        else:
-            raise ValueError("Config must have 'host' or 'server' attribute")
-
-        self._modbus_port = config.port
-        # Only set init_config if it's a HubConfig, not a ModbusSettings
-        if hasattr(config, 'modules'):
+            self._modbus_port = config.port
             self._init_config = config.modules
         else:
-            self._init_config = []
+            raise ValueError("Config must be a HubConfig")

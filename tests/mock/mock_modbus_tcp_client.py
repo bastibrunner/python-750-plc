@@ -228,6 +228,11 @@ class MockModbusTcpClient:
             response.registers = self._input_registers[address : address + count]
         return response
 
+    def set_holding_register_value(self, address, value) -> None:
+        """Set the value of a holding register."""
+        log.info("Setting holding register value to %d at address %d", value, address)
+        self._holding_registers[address] = value
+
     def read_holding_registers(self, address=0, count=1) -> ModbusPDU:
         """Read holding registers."""
         log.info("Reading holding registers from %d to %d", address, address + count)
@@ -237,6 +242,11 @@ class MockModbusTcpClient:
         response.registers = self._holding_registers[address : address + count]
         log.info("Read holding registers: %s", response.registers)
         return response
+
+    def set_discrete_input_value(self, address, value) -> None:
+        """Set the value of a discrete input."""
+        log.info("Setting discrete input value to %d at address %d", value, address)
+        self._discrete_inputs[address] = value
 
     def read_discrete_inputs(self, address=0, count=1) -> ModbusPDU:
         """Read discrete inputs."""

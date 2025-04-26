@@ -10,7 +10,8 @@ from typing import Any, ClassVar, Literal, Self
 
 from pymodbus.client import ModbusTcpClient
 
-from wg750xxx.modules.channel import WagoChannel
+# Remove this import to break the circular dependency
+# from wg750xxx.modules.channel import WagoChannel
 
 
 from .registers import Bits, Words
@@ -56,26 +57,25 @@ class ModbusState:
     def __setitem__(self, key: ModbusChannelType, value: Words | Bits) -> None:
         setattr(self, key, value)
 
-    def get_changed_addresses(self, current_state: Self) -> set[int]:
+    def get_changed_addresses(self, current_state: dict[ModbusChannelType, Self]) -> set[int]:
         """Get the addresses that have changed between the current state and the previous state."""
         changed_addresses = set()
-        for key in self.__dict__:
-            if key in ["input", "holding", "discrete", "coil"]:
-                self_state = getattr(self, key)
-                current = getattr(current_state, key)
-                # Get the minimum length to avoid index errors
-                min_length = min(len(self_state), len(current))
+        for key in current_state:
+            self_state = getattr(self, key)
+            current = current_state.get(key,[])
+            # Get the minimum length to avoid index errors
+            min_length = min(len(self_state), len(current))
 
-                # Compare values at each address in the range
-                for i in range(min_length):
-                    if self_state[i] != current[i]:
-                        changed_addresses.add(i)
+            # Compare values at each address in the range
+            for i in range(min_length):
+                if self_state[i] != current[i]:
+                    changed_addresses.add(i)
 
-                # If one state is longer than the other, all the additional addresses have changed
-                if len(self_state) > min_length:
-                    changed_addresses.update(range(min_length, len(self_state)))
-                if len(current) > min_length:
-                    changed_addresses.update(range(min_length, len(current)))
+            # If one state is longer than the other, all the additional addresses have changed
+            if len(self_state) > min_length:
+                changed_addresses.update(range(min_length, len(self_state)))
+            if len(current) > min_length:
+                changed_addresses.update(range(min_length, len(current)))
 
         return changed_addresses
 
@@ -140,7 +140,7 @@ class ModbusConnection:
         }
 
         # Channel callback registry: {channel_type: {address: [channels]}}
-        self._channel_registry: dict[ModbusChannelType, dict[int, list[WagoChannel]]] = {
+        self._channel_registry: dict[ModbusChannelType, dict[int, list["WagoChannel"]]] = {
             "input": {},
             "holding": {},
             "discrete": {},
@@ -283,7 +283,7 @@ class ModbusConnection:
 
         for modbus_channel_type in states_to_update:
             # Store the current state before updating
-            current_state = getattr(self.state, modbus_channel_type).copy()
+            current_state = {modbus_channel_type: getattr(self.state, modbus_channel_type).copy()}
 
             # Update the state
             if modbus_channel_type == "input":
@@ -680,28 +680,23 @@ class ModbusConnection:
         self._update_holding_state()
 
     def register_channel_callback(self, modbus_channel: "ModbusChannel", wago_channel: 'WagoChannel') -> None:
-        """Register a channel to be notified when a modbus address changes."""
-        channel_type = modbus_channel.channel_type
-        address = modbus_channel.address
+        """Register a callback to be called when a channel value changes."""
+        if modbus_channel.channel_type not in self._channel_registry:
+            log.warning("Cannot register callback for unsupported channel type: %s", modbus_channel.channel_type)
+            return
 
-        if address not in self._channel_registry[channel_type]:
-            self._channel_registry[channel_type][address] = []
+        if modbus_channel.address not in self._channel_registry[modbus_channel.channel_type]:
+            self._channel_registry[modbus_channel.channel_type][modbus_channel.address] = []
 
-        if wago_channel not in self._channel_registry[channel_type][address]:
-            self._channel_registry[channel_type][address].append(wago_channel)
+        self._channel_registry[modbus_channel.channel_type][modbus_channel.address].append(wago_channel)
 
     def unregister_channel_callback(self, modbus_channel: "ModbusChannel", wago_channel: 'WagoChannel') -> None:
-        """Unregister a channel from being notified when a modbus address changes."""
-        channel_type = modbus_channel.channel_type
-        address = modbus_channel.address
-
-        if address in self._channel_registry[channel_type]:
-            if wago_channel in self._channel_registry[channel_type][address]:
-                self._channel_registry[channel_type][address].remove(wago_channel)
-
-                # Clean up empty entries
-                if not self._channel_registry[channel_type][address]:
-                    del self._channel_registry[channel_type][address]
+        """Unregister a callback for a channel."""
+        if (modbus_channel.channel_type in self._channel_registry and
+            modbus_channel.address in self._channel_registry[modbus_channel.channel_type]):
+            channel_list = self._channel_registry[modbus_channel.channel_type][modbus_channel.address]
+            if wago_channel in channel_list:
+                channel_list.remove(wago_channel)
 
 
 class ModbusChannel:

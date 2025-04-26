@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from wg750xxx.settings import ModbusSettings
+from wg750xxx.settings import HubConfig, ModuleConfig
 from wg750xxx.hub import Hub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
@@ -87,7 +87,7 @@ def basic_hub(modbus_mock: MockModbusTcpClient) -> Generator[Hub, None, None]:
     Returns:
         A Hub instance with no modules
     """
-    modbus_settings = ModbusSettings(server="dummy", port=502)
+    modbus_settings = HubConfig(host="dummy", port=502)
     hub_instance = Hub(modbus_settings, initialize=False)
     hub_instance.connect()
     hub_instance.initialize(discovery=False)
@@ -104,7 +104,7 @@ def configured_hub(modbus_mock_with_modules: MockModbusTcpClient) -> Generator[H
     Returns:
         A Hub instance with the specified modules
     """
-    modbus_settings = ModbusSettings(server="dummy", port=502)
+    modbus_settings = HubConfig(host="dummy", port=502)
     # Initialize the hub with the modbus settings but don't automatically initialize
     hub_instance = Hub(modbus_settings, initialize=False)
     # Manually connect the hub (this will set up the client)
@@ -133,7 +133,7 @@ def dali_hub(dali_modbus_mock: MockModbusTcpClientForDaliModule) -> Generator[Hu
     Returns:
         A Hub instance configured for DALI module testing
     """
-    modbus_settings = ModbusSettings(server="dummy", port=502)
+    modbus_settings = HubConfig(host="dummy", port=502)
     # Initialize the hub with the modbus settings but don't automatically initialize
     hub_instance = Hub(modbus_settings, initialize=False)
     # Manually connect the hub (this will set up the client)

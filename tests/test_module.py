@@ -13,17 +13,19 @@ from wg750xxx.modules.module import ModuleConfig
 @pytest.fixture(scope="module")
 def hub() -> Generator[Hub, None, None]:
     """Create a Hub instance for testing."""
-    hub_instance = Hub(HubConfig(host="10.22.22.16", port=502), True)
-    yield hub_instance
+    try:
+        hub_instance = Hub(HubConfig(host="10.22.22.16", port=502), True)
+        yield hub_instance
+    except Exception as e:
+        pytest.skip(f"Test skipped: Need physical PLC connection, but failed to create Hub instance: {e}")
 
 
 @pytest.fixture(scope="module")
 def module_config(hub: Hub) -> List[ModuleConfig]:
     """Store module configuration for debugging."""
-    return [i.config_dump() for i in hub.modules]
+    return [i.config for i in hub.modules]
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
 def test_read_register(hub: Hub) -> None:
     """Test reading registers."""
     client = hub._client
@@ -61,7 +63,6 @@ def test_read_register(hub: Hub) -> None:
     _coils = register.bits
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
 def test_module_count_analog(hub: Hub) -> None:
     """Test counting analog modules."""
     assert len(hub.get_digital_modules()) == 36, (
@@ -69,7 +70,7 @@ def test_module_count_analog(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_module_count_digital(hub: Hub) -> None:
     """Test counting digital modules."""
     assert len(hub.get_analog_modules()) == 11, (
@@ -77,7 +78,7 @@ def test_module_count_digital(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_module_count_total(hub: Hub) -> None:
     """Test counting total modules."""
     assert len(hub.modules) == 47, (
@@ -85,7 +86,7 @@ def test_module_count_total(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_module_digital_input_bits_match(hub: Hub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
@@ -98,7 +99,7 @@ def test_module_digital_input_bits_match(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_module_digital_output_bits_match(hub: Hub) -> None:
     """Test matching digital output bits."""
     digital_outputs_bits = sum(
@@ -111,7 +112,7 @@ def test_module_digital_output_bits_match(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_module_analog_input_bits_match(hub: Hub) -> None:
     """Test matching analog input bits."""
     analog_inputs_bits = (
@@ -127,7 +128,7 @@ def test_module_analog_input_bits_match(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_module_analog_output_bits_match(hub: Hub) -> None:
     """Test matching analog output bits."""
     analog_outputs_bits = (
@@ -143,7 +144,7 @@ def test_module_analog_output_bits_match(hub: Hub) -> None:
     )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 def test_channel_count_match_all_modules(hub: Hub) -> None:
     """Test matching channel counts for all modules."""
     for module in hub.modules:
@@ -156,7 +157,7 @@ def test_channel_count_match_all_modules(hub: Hub) -> None:
         )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 @pytest.mark.parametrize(
     "module_idx,modbus_channel_type",
     [
@@ -184,7 +185,7 @@ def test_module_channel_type(
         )
 
 
-@pytest.mark.skip(reason="Test needs physical PLC connection")
+
 @pytest.mark.parametrize(
     "module_idx,modbus_channel_type,start_address",
     [

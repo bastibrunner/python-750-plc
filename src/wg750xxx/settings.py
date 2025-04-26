@@ -47,9 +47,6 @@ class ModuleConfig(BaseModel):
     channels: list[ChannelConfig] | None = Field(
         description="The channels of the module", default=None
     )
-    channels_dict: dict[str, ChannelConfig] | None = Field(
-        description="The channels of the module", default=None
-    )
 
     @computed_field
     @property
@@ -66,11 +63,7 @@ class HubConfig(BaseModel):
         description="The hostname or IP address of the Wago Modbus TCP server"
     )
     port: int = Field(description="The port of the Wago Modbus TCP server", default=502)
-    modules: list[ModuleConfig] = Field(description="The modules of the hub")
-    modules_dict: dict[str, ModuleConfig] | None = Field(
-        description="The modules of the hub", default=None
-    )
-
+    modules: list[ModuleConfig] = Field(description="The modules of the hub", default=[])
 
 class ModbusSettings(BaseModel):
     """Settings for the Modbus server."""

@@ -38,7 +38,7 @@ class Words:
             self._words = self._words[:size]
         self.width: int = self._words.size
 
-    def copy(self) -> Self:
+    def copy(self) -> "Words":
         """Copy the word register."""
         return Words(self._words.copy())
 

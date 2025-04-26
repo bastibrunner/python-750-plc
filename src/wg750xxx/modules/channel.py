@@ -1,7 +1,7 @@
 """Module for handling the channels of a Wago Module."""
 
 import logging
-from typing import Any, Literal, Callable
+from typing import Any, Literal, Callable, Self
 
 from ..settings import ChannelConfig
 from ..modbus.state import ModbusChannel
@@ -88,6 +88,10 @@ class WagoChannel:
             f"write method not implemented for {self.__class__.__name__}"
         )
 
+    def get_instance(self) -> Self:
+        """Get an instance of the channel."""
+        return self
+
     def __str__(self) -> str:
         """Get a string representation of the channel."""
         if self.modbus_channel is None:
@@ -99,13 +103,14 @@ class WagoChannel:
         """Get a representation of the channel."""
         if self.modbus_channel is None:
             return f"{self.channel_type} (no modbus address)"
-        else:
-            return (
-                f"{self.channel_type} {self.modbus_channel.address} with id {hex(id(self))}"
-            )
+        return (
+            f"{self.channel_type} {self.modbus_channel.address} with id {hex(id(self))}"
+        )
 
     def __eq__(self, other: object) -> bool:
         """Check if the channel is equal to another channel."""
+        if not isinstance(other, WagoChannel):
+            return False
         return (
             self.channel_type == other.channel_type
             and self.modbus_channel.address == other.modbus_channel.address

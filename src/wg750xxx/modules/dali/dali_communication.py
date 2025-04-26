@@ -121,7 +121,7 @@ class DaliOutputMessage:
 
     def __repr__(self) -> str:
         """Represent the DALI message as a string."""
-        return f"{__class__.__name__} object at {hex(id(self))}: {self.__dict__}"
+        return f"{self.__class__.__name__} object at {hex(id(self))}: {self.__dict__}"
 
     def __str__(self) -> str:
         """Represent the DALI message as a string."""

@@ -8,7 +8,7 @@ from homeassistant.core import logging
 from ..module import WagoModule
 from ..spec import IOType, ModbusChannelSpec, ModuleSpec
 from .channels import DaliChannel
-from .dali_commands import DaliCommands
+from .module_setup import ModuleSetup
 from .dali_communication import DaliCommunicationRegister
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,21 +51,21 @@ class Wg750DaliMaster(WagoModule):
 
     def __getitem__(self, key: int) -> DaliChannel | None:
         """Get a DALI channel by index."""
-        if self.channel is None:
+        if self.channels is None:
             return None
-        return self.channel[key]
+        return self.channels[key]
 
     def __len__(self) -> int:
         """Get the number of DALI channels."""
-        if self.channel is None:
+        if self.channels is None:
             return 0
-        return len(self.channel)
+        return len(self.channels)
 
     def __iter__(self) -> Iterator[DaliChannel]:
         """Iterate over the DALI channels."""
-        if self.channel is None:
+        if self.channels is None:
             return iter([])
-        return iter(cast(list[DaliChannel], self.channel))
+        return iter(cast(list[DaliChannel], self.channels))
 
     def _read_status_byte(self) -> int:
         """Read the status byte of the DALI message."""
@@ -79,9 +79,9 @@ class Wg750DaliMaster(WagoModule):
         """Create the channels of the DALI master."""
         if not self._initialized:
             return
-        command = DaliCommands(self.dali_communication_register)
+        module_setup = ModuleSetup(self.dali_communication_register)
         try:
-            short_addresses = command.query_short_address_present()
+            short_addresses = module_setup.query_short_address_present()
         except TimeoutError:
             _LOGGER.error(
                 "Error setting up DALI channels: Timeout waiting for Dali Response"
