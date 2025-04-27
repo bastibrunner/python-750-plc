@@ -2,8 +2,8 @@
 
 from typing import Any, Literal
 
-from ..channel import WagoChannel
-from ..exceptions import WagoModuleError
+from wg750xxx.modules.channel import WagoChannel
+from wg750xxx.modules.exceptions import WagoModuleError
 
 BytePosition = Literal["MSB", "LSB"]
 

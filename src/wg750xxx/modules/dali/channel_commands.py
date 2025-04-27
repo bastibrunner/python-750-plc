@@ -56,8 +56,7 @@ class DaliChannelCommands(DaliChannelBase):
     # 160. Get current value
     def get_current_value(self) -> int:
         """Get current value."""
-        r = self._read_command(0b10100000)
-        return r
+        return self._read_command(0b10100000)
 
     # 999. WAGO specific: Direct brightness control
     def set_brightness(self, brightness: int) -> None:

@@ -6,6 +6,8 @@ import pytest
 from wg750xxx.settings import HubConfig, ModuleConfig
 from wg750xxx.wg750xxx import PLCHub
 
+# ruff: noqa: SLF001
+
 
 def test_hub_accepts_only_hubconfig():
     """Test that Hub only accepts HubConfig as parameter."""

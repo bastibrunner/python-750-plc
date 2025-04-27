@@ -2,7 +2,6 @@
 
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 import logging
-from typing import Dict
 
 import pytest
 from pytest_subtests import SubTests
@@ -12,7 +11,7 @@ from wg750xxx.wg750xxx import PLCHub
 
 logger = logging.getLogger(__name__)
 
-# Using fixtures from conftest.py now
+# ruff: noqa: SLF001
 
 
 def test_module_digital_input_bits_match(configured_hub: PLCHub) -> None:
@@ -124,7 +123,7 @@ def test_module_returns_correct_type_when_indexed(configured_hub: PLCHub) -> Non
 
 
 def test_all_configured_modules_present(
-    subtests: SubTests, configured_hub: PLCHub, modules: Dict[int, int]
+    subtests: SubTests, configured_hub: PLCHub, modules: dict[int, int]
 ) -> None:
     """Test if all configured modules are present."""
     for module_id in modules:
@@ -135,7 +134,7 @@ def test_all_configured_modules_present(
 
 
 @pytest.mark.parametrize(
-    "module_idx,modbus_channel_type,start_address",
+    ("module_idx", "modbus_channel_type", "start_address"),
     [
         (1, "holding", 0x0000),
         (2, "holding", 0x0004),
@@ -159,7 +158,7 @@ def test_module_addresses(
 ) -> None:
     """Test module addresses."""
     for index, channel in enumerate(
-        configured_hub.modules[module_idx].modbus_channels[modbus_channel_type]  # type: ignore
+        configured_hub.modules[module_idx].modbus_channels[modbus_channel_type]
     ):
         assert channel.address == start_address + index, (
             f"Error: expected address {start_address + index}, got {channel.address}"

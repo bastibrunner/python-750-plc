@@ -3,7 +3,8 @@
 # pylint: disable=unused-variable,too-many-public-methods
 from typing import Any
 
-from ..exceptions import WagoModuleError
+from wg750xxx.modules.exceptions import WagoModuleError
+
 from .dali_communication import DaliCommunicationRegister, DaliOutputMessage
 
 

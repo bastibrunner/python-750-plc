@@ -171,7 +171,7 @@ class Bytes:
             self._bytes = value
         elif isinstance(value, int):
             bytes_obj = self._from_int(value)
-            self._bytes = bytes_obj._bytes
+            self._bytes = bytes_obj._bytes  # noqa: SLF001
         else:
             self._bytes = np.array(value, dtype=np.uint8)
         if size == 0:
@@ -249,8 +249,7 @@ class Bytes:
         """Get the byte register content as bit register."""
         bit_list = []
         for byte in self._bytes:
-            for i in range(7, -1, -1):
-                bit_list.append(bool((byte >> i) & 1))
+            bit_list.extend(bool((byte >> i) & 1) for i in range(7, -1, -1))
         return Bits(bit_list)
 
     def __int__(self) -> int:
@@ -410,8 +409,7 @@ class Words:
         """Get the word register content as bit register."""
         bit_list = []
         for word in self._words:
-            for i in range(15, -1, -1):
-                bit_list.append(bool((word >> i) & 1))
+            bit_list.extend(bool((word >> i) & 1) for i in range(15, -1, -1))
         return Bits(bit_list)
 
     def bytes(self, byteorder: str = "little") -> Bytes:
@@ -435,11 +433,6 @@ class Words:
     def __int__(self) -> int:
         """Get the word register content as integer representation."""
         return self.value_to_int()
-
-    def value_to_float(self) -> float:
-        """Get the word register content as float representation."""
-        # TODO: Implement this properly
-        return float(self.value_to_int())
 
     def value_to_string(self) -> str:
         """Get the word register content as string representation."""

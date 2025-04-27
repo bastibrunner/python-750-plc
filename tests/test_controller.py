@@ -13,9 +13,8 @@ from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 
 logger = logging.getLogger(__name__)
 
-# Using fixtures from conftest.py
 
-
+# ruff: noqa: SLF001
 def test_controller_info_read(basic_hub: PLCHub) -> None:
     """Test that controller info is read correctly."""
     controller_info = basic_hub.info
@@ -162,7 +161,7 @@ def test_controller_config_with_none(modbus_mock: MockModbusTcpClient) -> None:
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
-        hub.config = None  # type: ignore
+        hub.config = None
     assert hub.config is not None, "Config should not be None"
 
 
@@ -173,7 +172,7 @@ def test_controller_config_with_invalid_config(
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
-        hub.config = "invalid_config"  # type: ignore
+        hub.config = "invalid_config"
 
 
 def test_controller_module_config(modbus_mock: MockModbusTcpClient) -> None:

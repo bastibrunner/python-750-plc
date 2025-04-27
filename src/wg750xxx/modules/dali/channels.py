@@ -3,9 +3,9 @@
 
 from typing import Any
 
+from wg750xxx.modules.channel import WagoChannel
 from wg750xxx.modules.dali.channel_setup import DaliChannelSetup
 
-from ..channel import WagoChannel
 from .channel_commands import DaliChannelCommands
 from .channel_status import DaliChannelStatus
 from .dali_communication import DaliCommunicationRegister

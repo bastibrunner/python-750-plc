@@ -6,6 +6,8 @@ import pytest
 
 from wg750xxx.modbus.registers import Bytes, Words
 
+# ruff: noqa: SLF001
+
 
 def test_words_copy_method():
     """Test that the Words.copy() method returns a new Words instance."""

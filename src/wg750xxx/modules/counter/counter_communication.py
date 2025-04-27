@@ -1,7 +1,7 @@
 """Counter communication."""
 
-from ...modbus.registers import Register, Words
-from ...modbus.state import AddressDict, ModbusConnection
+from wg750xxx.modbus.registers import Register, Words
+from wg750xxx.modbus.state import AddressDict, ModbusConnection
 
 
 class CounterControlByte:

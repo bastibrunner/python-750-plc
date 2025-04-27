@@ -2,8 +2,8 @@
 
 from typing import ClassVar
 
-from ..module import WagoModule
-from ..spec import IOType, ModbusChannelSpec, ModuleSpec
+from wg750xxx.modules.module import WagoModule
+from wg750xxx.modules.spec import IOType, ModbusChannelSpec, ModuleSpec
 
 
 class Wg750FeldbuskopplerEthernet(WagoModule):

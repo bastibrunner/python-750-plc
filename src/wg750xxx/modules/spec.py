@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
-from ..modbus.state import ModbusChannelSpec
+from wg750xxx.modbus.state import ModbusChannelSpec
 
 
 class IOType(NamedTuple):

@@ -11,6 +11,8 @@ from wg750xxx.modules.digital.channels import DigitalEvent, DigitalIn, EventButt
 from wg750xxx.settings import ChannelConfig
 from wg750xxx.wg750xxx import PLCHub
 
+# ruff: noqa: SLF001
+
 
 @pytest.fixture
 def mock_modbus_connection():
@@ -42,7 +44,7 @@ def test_channel_is_event_button_when_device_class_set(configured_hub: PLCHub) -
     assert len(digital_input_modules) > 0, "No digital input modules found for testing"
 
     test_module = digital_input_modules[0]
-    original_channel = test_module.channels[0]  # type: ignore
+    original_channel = test_module.channels[0]
 
     # Create a new channel with device_class set to event_button
     discrete = original_channel.modbus_channel

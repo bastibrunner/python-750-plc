@@ -23,10 +23,11 @@ CounterModuleTypes = (Wg750Counter,)
 def test_counter_modules_created(configured_hub: PLCHub) -> None:
     """Test that counter modules are created correctly."""
     # Find counter modules based on their aliases (typically include "counter")
-    counter_modules = []
-    for module in configured_hub.modules:
-        if any("404" in alias.lower() for alias in module.aliases):
-            counter_modules.append(module)
+    counter_modules = [
+        module
+        for module in configured_hub.modules
+        if any("404" in alias.lower() for alias in module.aliases)
+    ]
 
     # If no counter modules found by alias, this test will be skipped
     for module in counter_modules:
@@ -48,10 +49,11 @@ def test_counter_channel_read(
 ) -> None:
     """Test reading from counter channels."""
     # Find counter modules
-    counter_modules = []
-    for module in configured_hub.modules:
-        if any("404" in alias.lower() for alias in module.aliases):
-            counter_modules.append(module)
+    counter_modules = [
+        module
+        for module in configured_hub.modules
+        if any("404" in alias.lower() for alias in module.aliases)
+    ]
 
     if not counter_modules:
         pytest.skip("No counter modules found in the configured hub")
@@ -79,10 +81,11 @@ def test_counter_channel_reset(
 ) -> None:
     """Test counter reset functionality if available."""
     # Find counter modules
-    counter_modules = []
-    for module in configured_hub.modules:
-        if any("404" in alias.lower() for alias in module.aliases):
-            counter_modules.append(module)
+    counter_modules = [
+        module
+        for module in configured_hub.modules
+        if any("404" in alias.lower() for alias in module.aliases)
+    ]
 
     if not counter_modules:
         pytest.skip("No counter modules found in the configured hub")
@@ -114,10 +117,11 @@ def test_counter_channel_callbacks(
 ) -> None:
     """Test that counter channel callbacks work correctly."""
     # Find counter modules
-    counter_modules = []
-    for module in configured_hub.modules:
-        if any("404" in alias.lower() for alias in module.aliases):
-            counter_modules.append(module)
+    counter_modules = [
+        module
+        for module in configured_hub.modules
+        if any("404" in alias.lower() for alias in module.aliases)
+    ]
 
     if not counter_modules:
         pytest.skip("No counter modules found in the configured hub")
@@ -159,10 +163,11 @@ def test_counter_channel_callbacks(
 def test_counter_channel_config(configured_hub: PLCHub) -> None:
     """Test counter channel configuration."""
     # Find counter modules
-    counter_modules = []
-    for module in configured_hub.modules:
-        if any("404" in alias.lower() for alias in module.aliases):
-            counter_modules.append(module)
+    counter_modules = [
+        module
+        for module in configured_hub.modules
+        if any("404" in alias.lower() for alias in module.aliases)
+    ]
 
     if not counter_modules:
         pytest.skip("No counter modules found in the configured hub")
@@ -186,10 +191,11 @@ def test_32bit_counter_values(
 ) -> None:
     """Test 32-bit counter values if available."""
     # Find counter modules
-    counter_modules = []
-    for module in configured_hub.modules:
-        if any("404" in alias.lower() for alias in module.aliases):
-            counter_modules.append(module)
+    counter_modules = [
+        module
+        for module in configured_hub.modules
+        if any("404" in alias.lower() for alias in module.aliases)
+    ]
 
     if not counter_modules:
         pytest.skip("No counter modules found in the configured hub")

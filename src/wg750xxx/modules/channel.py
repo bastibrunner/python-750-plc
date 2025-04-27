@@ -5,9 +5,9 @@ import logging
 import time
 from typing import Any, Literal, Self
 
-from ..const import DEFAULT_SCAN_INTERVAL
-from ..modbus.state import ModbusChannel
-from ..settings import ChannelConfig
+from wg750xxx.const import DEFAULT_SCAN_INTERVAL
+from wg750xxx.modbus.state import ModbusChannel
+from wg750xxx.settings import ChannelConfig
 
 log = logging.getLogger(__name__)
 

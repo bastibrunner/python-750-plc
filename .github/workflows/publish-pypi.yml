@@ -1,13 +1,13 @@
 name: Upload Python Package
 
-on:
+on: # yamllint disable-line rule:truthy
   release:
     types: [created]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: 
+    environment:
       name: pypi
       url: https://pypi.org/p/wg750xxx
     permissions:
@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

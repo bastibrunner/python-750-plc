@@ -1,4 +1,4 @@
-"""This is a simple demo of the Wago 750xxx Module.
+"""A simple demo of the Wago 750xxx Module.
 
 It will connect to the Wago 750xxx bus, print the discovered modules and their channels.
 The modules will be polled regularly and the updated values will be printed to the console.
@@ -15,22 +15,23 @@ from wg750xxx.modules.channel import WagoChannel
 from wg750xxx.settings import HubConfig
 from wg750xxx.wg750xxx import PLCHub
 
+log = logging.getLogger()
+log.setLevel(logging.INFO)
+log.addHandler(logging.StreamHandler(sys.stdout))
+
 
 def on_change_callback(new_value: Any, channel: WagoChannel) -> None:
-    """Callback function for when a channel value changes.
-    It will print the channel id and the new value.
+    """Handle channel value changes.
+
+    Prints the channel id and the new value.
     """
-    print(f"{channel.config.id} {new_value}")
+    log.info("%s %s", channel.config.id, new_value)
 
 
 def main() -> None:
-    """Main function."""
-    log = logging.getLogger()
-    log.setLevel(logging.INFO)
-    log.addHandler(logging.StreamHandler(sys.stdout))
-
+    """Execute the main PLC monitoring process."""
     hub = PLCHub(HubConfig(host="10.22.22.16", port=502), True)
-    print(
+    log.info(
         yaml.dump(
             {"modules": [str(m.module_identifier) for m in hub.modules]}, indent=2
         )

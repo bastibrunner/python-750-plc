@@ -1,6 +1,7 @@
 """DALI Status Byte."""
 
-from ...modbus.registers import Words
+from wg750xxx.modbus.registers import Words
+
 from .exceptions import (
     DaliActorError,
     DaliBusError,

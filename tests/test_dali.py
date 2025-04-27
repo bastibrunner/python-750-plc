@@ -3,7 +3,7 @@
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 
 import logging
-from typing import List, cast
+from typing import cast
 
 from wg750xxx.modules.dali.dali_communication import DaliOutputMessage
 from wg750xxx.modules.dali.module_setup import ModuleSetup
@@ -113,14 +113,14 @@ def test_dali_command_query_short_address_present(
 ) -> None:
     """Test the query short address present command."""
     dali_modbus_mock.initialize_state()
-    dali_hub.connection.update_state()  # type: ignore
+    dali_hub.connection.update_state()
     command: ModuleSetup = ModuleSetup(
         cast(
             Wg750DaliMaster,
-            dali_hub.modules["641"][0],  # type: ignore
+            dali_hub.modules["641"][0],
         ).dali_communication_register
     )
-    result: List[int] = command.query_short_address_present()
+    result: list[int] = command.query_short_address_present()
     log.info("Result of query short address present: %s", result)
     assert result == [
         2,

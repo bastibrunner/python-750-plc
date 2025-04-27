@@ -3,11 +3,11 @@
 import asyncio
 from enum import Enum
 import time
-from typing import Any, Callable, Optional, Self, Set
+from typing import Any, Callable, Optional, Self
 
-from ...modbus.state import Coil, Discrete
-from ..channel import WagoChannel
-from ..exceptions import WagoModuleError
+from wg750xxx.modbus.state import Coil, Discrete
+from wg750xxx.modules.channel import WagoChannel
+from wg750xxx.modules.exceptions import WagoModuleError
 
 
 class DigitalIn(WagoChannel):
@@ -34,7 +34,7 @@ class DigitalIn(WagoChannel):
         if not isinstance(self.modbus_channel, Discrete):
             raise TypeError("modbus_channel must be a Discrete")
 
-    def get_instance(self) -> Self | "EventButton":
+    def get_instance(self) -> "Self | EventButton":
         """Get an instance of the channel."""
         if self.config.device_class == "event_button":
             return EventButton(self.modbus_channel, self.config)
@@ -151,7 +151,7 @@ class EventButton(DigitalIn):
         self._last_event: Optional[DigitalEvent] = None
         self._raw_callback: Optional[Callable[[Any, Any | None], None]] = None
         self._last_state_change_time: float = 0
-        self._pending_tasks: Set[asyncio.Task] = set()
+        self._pending_tasks: set[asyncio.Task] = set()
         self._current_event: DigitalEvent | None = None
         self._pending_event: DigitalEvent | None = None
 
@@ -297,6 +297,7 @@ class EventButton(DigitalIn):
         return self._last_event.value if self._last_event else None
 
     def notify_value_change(self, new_value: Any) -> None:
+        """Notify the channel that its value has changed."""
         if self.on_change_callback is None:
             return
 

@@ -2,7 +2,8 @@
 
 from typing import ClassVar
 
-from ..module import WagoModule
+from wg750xxx.modules.module import WagoModule
+
 from .channels import DigitalIn, DigitalOut
 
 

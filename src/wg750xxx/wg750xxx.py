@@ -76,7 +76,7 @@ class Modules:
         if isinstance(index, str):
             # If index is a string, try to find the module by alias
             modules = [
-                m for m in self._modules if index in m.aliases + [m.module_identifier]
+                m for m in self._modules if index in [*m.aliases, m.module_identifier]
             ]
             if not modules:
                 raise KeyError(f"No module found with alias {index}")
@@ -305,13 +305,12 @@ class PLCHub:
     def _read_data_width_in_state(self) -> dict[str, int]:
         """Read the data width in state."""
         # Read the width from the controller
-        channel_spec = {
+        return {
             "holding": self._read_register(0x1022).value_to_int(),
             "input": self._read_register(0x1023).value_to_int(),
             "coil": self._read_register(0x1024).value_to_int(),
             "discrete": self._read_register(0x1025).value_to_int(),
         }
-        return channel_spec
 
     def _validate_module_discovery(self) -> None:
         """Validate the module discovery."""
@@ -413,8 +412,6 @@ class PLCHub:
     @config.setter
     def config(self, config: HubConfig) -> None:
         """Set the config of the hub."""
-        if not isinstance(config, HubConfig):
-            raise ValueError("Config must be a HubConfig")
         self._modbus_host = config.host
         self._modbus_port = config.port
 

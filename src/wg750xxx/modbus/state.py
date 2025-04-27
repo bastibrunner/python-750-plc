@@ -6,22 +6,12 @@ from functools import wraps
 import logging
 from threading import Thread
 import time
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Self,
-    Set,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Self, Union
 
 from pymodbus.client import ModbusTcpClient
 
-from ..const import DEFAULT_SCAN_INTERVAL
+from wg750xxx.const import DEFAULT_SCAN_INTERVAL
+
 from .exceptions import ModbusCommunicationError
 from .registers import Bits, Words
 
@@ -44,7 +34,7 @@ def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
         for _ in range(retries):
             try:
                 return func(*args, **kwargs)
-            except BrokenPipeError as e:
+            except BrokenPipeError as e:  # noqa: PERF203
                 log.warning(
                     "Failed to execute %s: %s, reconnecting...", func.__name__, e
                 )
@@ -63,9 +53,16 @@ class ModbusState:
         self,
         state_width: Optional[ModbusChannelSpec] = None,
         state: Optional[
-            Union["ModbusState", Dict[ModbusChannelType, Union[int, Bits, Words]]]
+            Union["ModbusState", dict[ModbusChannelType, Union[int, Bits, Words]]]
         ] = None,
     ) -> None:
+        """Initialize the ModbusState.
+
+        Args:
+            state_width: The width of the state.
+            state: The state to initialize the ModbusState with.
+
+        """
         if state_width is not None:
             self.coil: Bits = Bits(size=state_width["coil"])
             self.discrete: Bits = Bits(size=state_width["discrete"])
@@ -102,12 +99,15 @@ class ModbusState:
             raise ValueError("Either state_width or state must be provided")
 
     def __getitem__(self, key: ModbusChannelType) -> Union[Words, Bits]:
+        """Get the state of a specific channel type."""
         return getattr(self, key)
 
     def __setitem__(self, key: ModbusChannelType, value: Union[Words, Bits]) -> None:
+        """Set the state of a specific channel type."""
         setattr(self, key, value)
 
     def __len__(self) -> int:
+        """Get the total number of channels in the ModbusState."""
         return len(self.coil) + len(self.discrete) + len(self.input) + len(self.holding)
 
     def copy(self) -> "ModbusState":
@@ -120,10 +120,10 @@ class ModbusState:
         return new_state
 
     def get_changed_addresses(
-        self, other: Self, channel_types: Optional[List[ModbusChannelType]] = None
-    ) -> Dict[ModbusChannelType, Set[int]]:
+        self, other: Self, channel_types: Optional[list[ModbusChannelType]] = None
+    ) -> dict[ModbusChannelType, set[int]]:
         """Get the addresses that have changed between the current state and the previous state."""
-        changed_addresses: Dict[ModbusChannelType, Set[int]] = {}
+        changed_addresses: dict[ModbusChannelType, set[int]] = {}
         if channel_types is None:
             channel_types = vars(self).keys()
         for key in channel_types or []:
@@ -175,6 +175,7 @@ class ModbusConnection:
         Args:
             modbus_tcp_client: The Modbus TCP client to use for communication.
             bits_in_state: Dictionary specifying the number of bits for each channel type.
+            update_interval: The interval in milliseconds between updates.
 
         """
         self.modbus_tcp_client = modbus_tcp_client
@@ -429,7 +430,7 @@ class ModbusConnection:
                 min_interval = min(self._update_intervals.values())
                 time.sleep(min(min_interval / 1000, 0.01))
 
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:  # pylint: disable=broad-exception-caught # noqa: PERF203 BLE001
                 # TODO: Dont catch broad exception
                 log.error("Error in continuous update thread: %s", e)
                 time.sleep(0.5)  # Pause briefly after an error
@@ -523,7 +524,7 @@ class ModbusConnection:
             self._update_input_state(address, 1)
 
         register_value = self.state["input"][address]
-        if isinstance(register_value, Words) or isinstance(register_value, Bits):
+        if isinstance(register_value, (Words, Bits)):
             return register_value.value_to_int()
         return register_value
 
@@ -548,7 +549,7 @@ class ModbusConnection:
             self._update_holding_state(address, 1)
 
         register_value = self.state["holding"][address]
-        if isinstance(register_value, Words) or isinstance(register_value, Bits):
+        if isinstance(register_value, (Words, Bits)):
             return register_value.value_to_int()
         return register_value
 

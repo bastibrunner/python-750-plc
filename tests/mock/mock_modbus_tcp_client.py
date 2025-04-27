@@ -182,8 +182,8 @@ class MockModbusTcpClient:
             # 64 Module IDs
             log.info("Reading 64 Module IDs")
             module_ids = []
-            for module_id, count in self.modules.items():
-                module_ids.extend([module_id] * count)
+            for module_id, module_count in self.modules.items():
+                module_ids.extend([module_id] * module_count)
             response.registers = module_ids + [0] * (64 - len(module_ids))
         elif address in {0x2031, 0x2032}:
             # (next) 64 Module IDs

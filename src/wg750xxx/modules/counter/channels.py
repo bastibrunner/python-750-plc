@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from ..channel import WagoChannel
+from wg750xxx.modules.channel import WagoChannel
+
 from .counter_communication import CounterCommunicationRegister
 
 

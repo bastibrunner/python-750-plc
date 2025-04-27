@@ -3,7 +3,6 @@
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 
 from collections.abc import Generator
-from typing import List
 
 import pytest
 from pytest_socket import enable_socket, socket_allow_hosts
@@ -22,21 +21,21 @@ def hub() -> Generator[PLCHub, None, None]:
     try:
         hub_instance = PLCHub(HubConfig(host="10.22.22.16", port=502), True)
         yield hub_instance
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.skip(
             f"Test skipped: Need physical PLC connection, but failed to create Hub instance: {e}"
         )
 
 
 @pytest.fixture(scope="module")
-def module_config(hub: PLCHub) -> List[ModuleConfig]:
+def module_config(hub: PLCHub) -> list[ModuleConfig]:
     """Store module configuration for debugging."""
     return [i.config for i in hub.modules]
 
 
 def test_read_register(hub: PLCHub) -> None:
     """Test reading registers."""
-    client = hub._client
+    client = hub._client  # noqa: SLF001
     if client is None:
         pytest.skip("No physical PLC connection")
 

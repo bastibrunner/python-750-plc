@@ -4,9 +4,10 @@ from collections.abc import Callable, Iterator
 from logging import getLogger
 from typing import Any, ClassVar, cast
 
-from ..exceptions import WagoModuleError
-from ..module import WagoModule
-from ..spec import IOType, ModbusChannelSpec, ModuleSpec
+from wg750xxx.modules.exceptions import WagoModuleError
+from wg750xxx.modules.module import WagoModule
+from wg750xxx.modules.spec import IOType, ModbusChannelSpec, ModuleSpec
+
 from .channels import DaliChannel
 from .dali_communication import DaliCommunicationRegister
 from .exceptions import DaliError
@@ -15,6 +16,7 @@ from .module_setup import ModuleSetup
 from .module_status import ModuleStatus
 
 _LOGGER = getLogger(__name__)
+
 
 class Wg750DaliMaster(WagoModule):
     """750-641 1-Kanal DALI Master."""

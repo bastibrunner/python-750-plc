@@ -4,7 +4,6 @@
 from collections.abc import Generator
 import json
 import logging
-from typing import Dict
 from unittest.mock import patch
 
 import pytest
@@ -21,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def modules() -> Dict[int, int]:
+def modules() -> dict[int, int]:
     """Define the default modules configuration.
 
     Returns:
@@ -58,7 +57,7 @@ def modbus_mock() -> Generator[MockModbusTcpClient, None, None]:
 
 @pytest.fixture(scope="module")
 def modbus_mock_with_modules(
-    modules: Dict[int, int],
+    modules: dict[int, int],
 ) -> Generator[MockModbusTcpClient, None, None]:
     """Set up the modbus mock client with specific modules configuration.
 

@@ -4,14 +4,15 @@ from abc import abstractmethod
 import logging
 from typing import ClassVar, Self
 
-from ..const import DEFAULT_SCAN_INTERVAL
-from ..modbus.state import (
+from wg750xxx.const import DEFAULT_SCAN_INTERVAL
+from wg750xxx.modbus.state import (
     AddressDict,
     ModbusChannel,
     ModbusChannelType,
     ModbusConnection,
 )
-from ..settings import ChannelConfig, ModuleConfig
+from wg750xxx.settings import ChannelConfig, ModuleConfig
+
 from .channel import WagoChannel
 from .exceptions import WagoModuleError
 from .identifier import ModuleIdentifier
@@ -110,6 +111,7 @@ class WagoModule:
             module_identifier: The identifier of the module.
             config: The configuration settings for the module.
             auto_create_channels: Whether to automatically create channels during initialization.
+            update_interval: The update interval of the module.
 
         Raises:
             WagoModuleError: If spec is not set in subclass.
