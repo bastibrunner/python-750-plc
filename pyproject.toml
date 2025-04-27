@@ -1,4 +1,4 @@
-
+[build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 dependencies = [
@@ -7,11 +7,16 @@ dependencies = [
     "pymodbus==3.8.3",
 ]
 
-
-
+[project]
+name = "python-750-plc"
+version = "0.0.1"
+description = "Python module for interacting with WAGO 750 series PLCs through Modbus TCP"
+authors = [
+    { name="Bastian Brunner", email="bb@intern-net.de" }
+]
 
 [tool.bumpver]
-current_version = "0.1.0"
+current_version = "0.0.1"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 tag_message = "{new_version}"
