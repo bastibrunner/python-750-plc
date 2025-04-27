@@ -1,11 +1,6 @@
 [build-system]
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
-dependencies = [
-    "numpy==2.2.5",
-    "pydantic==2.11.3",
-    "pymodbus==3.8.3",
-]
 
 [project]
 name = "python-750-plc"
@@ -13,6 +8,24 @@ version = "0.0.1"
 description = "Python module for interacting with WAGO 750 series PLCs through Modbus TCP"
 authors = [
     { name="Bastian Brunner", email="bb@intern-net.de" }
+]
+license = "MIT"
+license-files = ["LICENSE*"]
+readme = "README.rst"
+keywords = ["home", "automation","plc","wago"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Topic :: Home Automation",
+  "Topic :: System :: Hardware",
+]
+requires-python = ">=3.6"
+dependencies = [
+    "numpy==2.2.5",
+    "pydantic==2.11.3",
+    "pymodbus==3.8.3",
 ]
 
 [tool.bumpver]
