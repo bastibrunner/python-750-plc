@@ -23,9 +23,9 @@ classifiers = [
 ]
 requires-python = ">=3.6"
 dependencies = [
-    "numpy==2.2.5",
-    "pydantic==2.11.3",
-    "pymodbus==3.8.3",
+    "numpy>=2.2.2",
+    "pydantic>=2.10.6",
+    "pymodbus>=3.8.3",
 ]
 
 [tool.bumpver]
