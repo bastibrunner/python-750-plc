@@ -3,9 +3,8 @@
 # pylint: disable=protected-access,redefined-outer-name
 import pytest
 
+from wg750xxx.settings import HubConfig, ModuleConfig
 from wg750xxx.wg750xxx import PLCHub
-from wg750xxx.settings import HubConfig
-from wg750xxx.settings import ModuleConfig
 
 
 def test_hub_accepts_only_hubconfig():
@@ -20,9 +19,7 @@ def test_hub_accepts_only_hubconfig():
     # Test with modules included
     module_config = ModuleConfig(name="test_module", type="test_type", index=0)
     hub_config_with_modules = HubConfig(
-        host="test_host",
-        port=1234,
-        modules=[module_config]
+        host="test_host", port=1234, modules=[module_config]
     )
     hub = PLCHub(hub_config_with_modules, initialize=False)
     assert hub._init_config == [module_config]
@@ -55,7 +52,7 @@ def test_hub_config_setter():
     new_config = HubConfig(
         host="new_host",
         port=5678,
-        modules=[ModuleConfig(name="new_module", type="new_type", index=0)]
+        modules=[ModuleConfig(name="new_module", type="new_type", index=0)],
     )
     hub.config = new_config
 

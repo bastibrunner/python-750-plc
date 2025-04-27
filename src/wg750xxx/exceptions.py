@@ -2,6 +2,7 @@
 
 from .const import ERROR_CODES
 
+
 class WagoException(Exception):
     """Base exception for Wago PLC errors."""
 

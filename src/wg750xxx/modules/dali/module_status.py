@@ -3,10 +3,7 @@
 # pylint: disable=unused-variable,too-many-public-methods
 import logging
 
-from .dali_communication import (
-    DaliInputMessage,
-    DaliOutputMessage,
-)
+from .dali_communication import DaliInputMessage, DaliOutputMessage
 from .misc import dali_response_to_channel_list
 from .module_base import ModuleBase
 

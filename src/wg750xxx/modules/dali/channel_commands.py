@@ -2,13 +2,14 @@
 
 # pylint: disable=unused-variable,too-many-public-methods
 
-from .dali_communication import (
-    DaliOutputMessage,
-)
 from .channel_base import DaliChannelBase
+from .dali_communication import DaliOutputMessage
 from .misc import check_value_range
+
+
 class DaliChannelCommands(DaliChannelBase):
     """DALI commands."""
+
     # Dali Commands DIN IEC 60929
 
     # 0. Power off

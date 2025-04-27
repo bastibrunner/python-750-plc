@@ -100,7 +100,7 @@ class MockModbusTcpClientForDaliModule(MockModbusTcpClient):
                 # addresses 16-23: bit 2 and bit 5 set -> 0x24 (00100100b)
                 # addresses 24-31: bit 2 and bit 4 set -> 0x14 (00010100b)
                 d0 = 0b10000100  # addresses 0-7: 2, 7
-                d1 = 0x00        # clear
+                d1 = 0x00  # clear
                 d2 = 0b01000100  # addresses 8-15: 10, 14
                 d3 = 0b00100100  # addresses 16-23: 18, 21
                 d4 = 0b00010100  # addresses 24-31: 26, 28
@@ -112,7 +112,7 @@ class MockModbusTcpClientForDaliModule(MockModbusTcpClient):
                 # addresses 48-55: bit 0 and bit 6 set -> 0x41 (01000001b)
                 # addresses 56-63: bit 0 and bit 7 set -> 0x81 (10000001b)
                 d0 = 0b00010001  # addresses 32-39: 32, 36
-                d1 = 0x00        # clear
+                d1 = 0x00  # clear
                 d2 = 0b00100001  # addresses 40-47: 40, 45
                 d3 = 0b01000001  # addresses 48-55: 48, 54
                 d4 = 0b10000001  # addresses 56-63: 56, 63

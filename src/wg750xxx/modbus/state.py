@@ -6,14 +6,24 @@ from functools import wraps
 import logging
 from threading import Thread
 import time
-from typing import Any, ClassVar, Literal, Self, TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Self,
+    Set,
+    Union,
+)
 
 from pymodbus.client import ModbusTcpClient
 
 from ..const import DEFAULT_SCAN_INTERVAL
-
-from .registers import Bits, Words
 from .exceptions import ModbusCommunicationError
+from .registers import Bits, Words
 
 if TYPE_CHECKING:
     from wg750xxx.modules.channel import WagoChannel
@@ -22,8 +32,9 @@ log = logging.getLogger(__name__)
 ModbusChannelType = Literal["coil", "discrete", "input", "holding"]
 ModbusBits = list[bool]
 AddressDict = dict[ModbusChannelType, int]
-ModbusChannelState = int | bool
+ModbusChannelState = Union[int, bool]
 ModbusChannelSpec = dict[ModbusChannelType, int]
+
 
 def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
     """Annotate the function to automatically reconnect to the Modbus server."""
@@ -38,7 +49,9 @@ def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
                     "Failed to execute %s: %s, reconnecting...", func.__name__, e
                 )
                 args[0].reconnect()
-        raise ModbusCommunicationError(f"Failed to execute {func.__name__} after {retries} retries")
+        raise ModbusCommunicationError(
+            f"Failed to execute {func.__name__} after {retries} retries"
+        )
 
     return wrapper
 
@@ -46,41 +59,71 @@ def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
 class ModbusState:
     """Class for handling the state of a Modbus connection."""
 
-    def __init__(self, state_width: ModbusChannelSpec | None = None, state: Self | dict[ModbusChannelType, int] | None = None) -> None:
+    def __init__(
+        self,
+        state_width: Optional[ModbusChannelSpec] = None,
+        state: Optional[
+            Union["ModbusState", Dict[ModbusChannelType, Union[int, Bits, Words]]]
+        ] = None,
+    ) -> None:
         if state_width is not None:
             self.coil: Bits = Bits(size=state_width["coil"])
             self.discrete: Bits = Bits(size=state_width["discrete"])
             self.input: Words = Words(size=state_width["input"])
             self.holding: Words = Words(size=state_width["holding"])
         elif state is not None:
-            self.coil: Bits = state.coil if isinstance(state, ModbusState) else state["coil"]
-            self.discrete: Bits = state.discrete if isinstance(state, ModbusState) else state["discrete"]
-            self.input: Words = state.input if isinstance(state, ModbusState) else state["input"]
-            self.holding: Words = state.holding if isinstance(state, ModbusState) else state["holding"]
+            if isinstance(state, ModbusState):
+                self.coil = state.coil.copy()
+                self.discrete = state.discrete.copy()
+                self.input = state.input.copy()
+                self.holding = state.holding.copy()
+            else:
+                self.coil = (
+                    state["coil"]
+                    if isinstance(state["coil"], Bits)
+                    else Bits(size=state["coil"])
+                )
+                self.discrete = (
+                    state["discrete"]
+                    if isinstance(state["discrete"], Bits)
+                    else Bits(size=state["discrete"])
+                )
+                self.input = (
+                    state["input"]
+                    if isinstance(state["input"], Words)
+                    else Words(size=state["input"])
+                )
+                self.holding = (
+                    state["holding"]
+                    if isinstance(state["holding"], Words)
+                    else Words(size=state["holding"])
+                )
         else:
             raise ValueError("Either state_width or state must be provided")
 
-    def __getitem__(self, key: ModbusChannelType) -> Words | Bits:
+    def __getitem__(self, key: ModbusChannelType) -> Union[Words, Bits]:
         return getattr(self, key)
 
-    def __setitem__(self, key: ModbusChannelType, value: Words | Bits) -> None:
+    def __setitem__(self, key: ModbusChannelType, value: Union[Words, Bits]) -> None:
         setattr(self, key, value)
 
     def __len__(self) -> int:
         return len(self.coil) + len(self.discrete) + len(self.input) + len(self.holding)
 
-    def copy(self) -> Self:
+    def copy(self) -> "ModbusState":
         """Create a copy of the ModbusState."""
-        return ModbusState(state={
-            "coil": self.coil.copy(),
-            "discrete": self.discrete.copy(),
-            "input": self.input.copy(),
-            "holding": self.holding.copy(),
-        })
+        new_state = ModbusState.__new__(ModbusState)
+        new_state.coil = self.coil.copy()
+        new_state.discrete = self.discrete.copy()
+        new_state.input = self.input.copy()
+        new_state.holding = self.holding.copy()
+        return new_state
 
-    def get_changed_addresses(self, other: Self, channel_types: list[ModbusChannelType] | None = None) -> dict[ModbusChannelType, set[int]]:
+    def get_changed_addresses(
+        self, other: Self, channel_types: Optional[List[ModbusChannelType]] = None
+    ) -> Dict[ModbusChannelType, Set[int]]:
         """Get the addresses that have changed between the current state and the previous state."""
-        changed_addresses: dict[ModbusChannelType, set[int]] = {}
+        changed_addresses: Dict[ModbusChannelType, Set[int]] = {}
         if channel_types is None:
             channel_types = vars(self).keys()
         for key in channel_types or []:
@@ -122,7 +165,10 @@ class ModbusConnection:
     """
 
     def __init__(
-        self, modbus_tcp_client: ModbusTcpClient, bits_in_state: ModbusChannelSpec, update_interval: int = DEFAULT_SCAN_INTERVAL
+        self,
+        modbus_tcp_client: ModbusTcpClient,
+        bits_in_state: ModbusChannelSpec,
+        update_interval: int = DEFAULT_SCAN_INTERVAL,
     ) -> None:
         """Initialize the ModbusConnection.
 
@@ -158,7 +204,9 @@ class ModbusConnection:
         }
 
         # Channel callback registry: {channel_type: {address: [channels]}}
-        self._channel_registry: dict[ModbusChannelType, dict[int, list["WagoChannel"]]] = {
+        self._channel_registry: dict[
+            ModbusChannelType, dict[int, list[WagoChannel]]
+        ] = {
             "input": {},
             "holding": {},
             "discrete": {},
@@ -175,7 +223,7 @@ class ModbusConnection:
 
     @auto_reconnect
     def _update_input_state(
-        self, address: int | None = None, width: int | None = None
+        self, address: Optional[int] = None, width: Optional[int] = None
     ) -> None:
         """Update the state of the input registers.
 
@@ -187,7 +235,9 @@ class ModbusConnection:
         if address is None:
             address = 0x0000
         if width is None:
-            width = self.bits_in_state["input"] // 16 - address  # if no width is provided, read the entire input state starting from the address
+            width = (
+                self.bits_in_state["input"] // 16 - address
+            )  # if no width is provided, read the entire input state starting from the address
         registers = Words(
             self.modbus_tcp_client.read_input_registers(address, count=width).registers
         )
@@ -202,7 +252,7 @@ class ModbusConnection:
 
     @auto_reconnect
     def _update_holding_state(
-        self, address: int | None = None, width: int | None = None
+        self, address: Optional[int] = None, width: Optional[int] = None
     ) -> None:
         """Update the state of the holding registers.
 
@@ -235,7 +285,7 @@ class ModbusConnection:
 
     @auto_reconnect
     def _update_discrete_state(
-        self, address: int | None = None, width: int | None = None
+        self, address: Optional[int] = None, width: Optional[int] = None
     ) -> None:
         """Update the state of the discrete inputs.
 
@@ -265,7 +315,7 @@ class ModbusConnection:
 
     @auto_reconnect
     def _update_coil_state(
-        self, address: int | None = None, width: int | None = None
+        self, address: Optional[int] = None, width: Optional[int] = None
     ) -> None:
         """Update the state of the coils.
 
@@ -292,11 +342,14 @@ class ModbusConnection:
         log.debug("Bits: %s", bits.value_to_bin())
         self.state["coil"][address - 0x0200 : address + width - 0x0200] = bits.value
 
-    def update_state(self, states_to_update: list[ModbusChannelType] | ModbusChannelType | None = None) -> None:
-        """Update the state of the Modbus connection."""
+    def update_state(
+        self,
+        states_to_update: list[ModbusChannelType] | ModbusChannelType | None = None,
+    ) -> None:
+        """Update the state of the ModbusConnection."""
         if states_to_update is None:
-            states_to_update = ["input", "holding", "discrete", "coil"]
-        elif not isinstance(states_to_update, list):
+            states_to_update = ["coil", "discrete", "input", "holding"]
+        if isinstance(states_to_update, str):
             states_to_update = [states_to_update]
 
         current_state = self.state.copy()
@@ -314,12 +367,18 @@ class ModbusConnection:
                 self._update_coil_state()
 
             # Get changed addresses
-            changed_addresses = self.state.get_changed_addresses(current_state, channel_types=[modbus_channel_type])
+            changed_addresses = self.state.get_changed_addresses(
+                current_state, channel_types=[modbus_channel_type]
+            )
 
             # Notify channels about changes
-            self._notify_channels_of_changes(modbus_channel_type, changed_addresses[modbus_channel_type])
+            self._notify_channels_of_changes(
+                modbus_channel_type, changed_addresses[modbus_channel_type]
+            )
 
-    def _notify_channels_of_changes(self, channel_type: ModbusChannelType, changed_addresses: set[int]) -> None:
+    def _notify_channels_of_changes(
+        self, channel_type: ModbusChannelType, changed_addresses: set[int]
+    ) -> None:
         """Notify registered channels about changes in their addresses."""
         for address in changed_addresses:
             if address in self._channel_registry[channel_type]:
@@ -348,24 +407,21 @@ class ModbusConnection:
             log.info("Starting continuous state update thread")
             self._running = True
 
-        update_counter = {state_type: 0 for state_type in self._update_intervals}
+        update_counter = dict.fromkeys(self._update_intervals, 0)
         last_log_time = time.time()
         while self._running:
             try:
                 current_time = time.time()
                 # Check and update each state type based on its interval
                 for state_type, interval in self._update_intervals.items():
-                    if (
-                        current_time - self._last_updates[state_type]
-                        >= interval / 1000
-                    ):
+                    if current_time - self._last_updates[state_type] >= interval / 1000:
                         log.debug("Updating %s state", state_type)
                         update_counter[state_type] += 1
                         self.update_state(state_type)
                         self._last_updates[state_type] = current_time
                 if current_time - last_log_time > 30:
                     log.info("Updates in last 30 seconds: %s", str(update_counter))
-                    update_counter = {state_type: 0 for state_type in self._update_intervals}
+                    update_counter = dict.fromkeys(self._update_intervals, 0)
                     last_log_time = current_time
 
                 # Sleep for a short time to prevent excessive CPU usage
@@ -373,7 +429,7 @@ class ModbusConnection:
                 min_interval = min(self._update_intervals.values())
                 time.sleep(min(min_interval / 1000, 0.01))
 
-            except Exception as e: # pylint: disable=broad-exception-caught
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 # TODO: Dont catch broad exception
                 log.error("Error in continuous update thread: %s", e)
                 time.sleep(0.5)  # Pause briefly after an error
@@ -386,39 +442,15 @@ class ModbusConnection:
         discrete_interval: int | None = None,
         coil_interval: int | None = None,
     ) -> None:
-        """Start a thread that continuously updates the Modbus state.
-
-        Args:
-            interval: Time in milliseconds between updates for all state types.
-                    If specified, overrides all individual settings.
-            input_interval: Time in milliseconds between input register updates.
-            holding_interval: Time in milliseconds between holding register updates.
-            discrete_interval: Time in milliseconds between discrete input updates.
-            coil_interval: Time in milliseconds between coil updates.
-
-        """
-        if self._update_thread is not None and self._update_thread.is_alive():
-            log.warning("Continuous update thread already running")
-            return
-
+        """Start the continuous update of the state."""
         self.set_update_interval(
-            interval=interval,
-            input_interval=input_interval,
-            holding_interval=holding_interval,
-            discrete_interval=discrete_interval,
-            coil_interval=coil_interval,
+            interval, input_interval, holding_interval, discrete_interval, coil_interval
         )
-        # Initialize last update times to now
-        current_time = time.time()
-        for state_type in self._last_updates:
-            self._last_updates[state_type] = current_time
 
-        # Start the update thread
-        self._update_thread = Thread(target=self._continuous_update, daemon=True)
-        self._update_thread.start()
-        log.info(
-            "Started continuous update thread with individual state type intervals"
-        )
+        if not self._running:
+            self._running = True
+            self._update_thread = Thread(target=self._continuous_update, daemon=True)
+            self._update_thread.start()
 
     def set_update_interval(
         self,
@@ -468,10 +500,7 @@ class ModbusConnection:
 
         if coil_interval is not None:
             self._update_intervals["coil"] = coil_interval
-            log.info(
-                "Setting coil state update interval to %s seconds", coil_interval
-            )
-
+            log.info("Setting coil state update interval to %s seconds", coil_interval)
 
     def stop_continuous_update(self) -> None:
         """Stop the continuous update thread."""
@@ -481,104 +510,72 @@ class ModbusConnection:
 
         log.info("Stopping continuous update thread")
         self._running = False
-        self._update_thread.join(timeout=2 * min(self._update_intervals.values()) / 1000)
+        self._update_thread.join(
+            timeout=2 * min(self._update_intervals.values()) / 1000
+        )
         if self._update_thread.is_alive():
             log.warning("Continuous update thread did not terminate gracefully")
         self._update_thread = None
 
     def read_input_register(self, address: int, update: bool = False) -> int:
-        """Read the value of a input register.
-
-        Args:
-            address: The address of the input register to read.
-            update: Whether to update the state of the input register.
-
-        """
+        """Read a single input register at the specified address."""
         if update:
-            self._update_input_state(address)
-        value = self.state["input"][address]
-        log.debug(
-            "Reading input register 0x%s Value: %s",
-            f"{address:04x}",
-            value.value_to_int(),
-        )
-        return value.value_to_int()
+            self._update_input_state(address, 1)
+
+        register_value = self.state["input"][address]
+        if isinstance(register_value, Words) or isinstance(register_value, Bits):
+            return register_value.value_to_int()
+        return register_value
 
     def read_input_registers(
         self, address: int, width: int, update: bool = False
     ) -> Words:
-        """Read the values of a range of input registers.
-
-        Args:
-            address: The address of the first input register to read.
-            width: The number of input registers to read.
-            update: Whether to update the state of the input registers.
-
-        """
+        """Read multiple input registers starting at the specified address."""
         if update:
             self._update_input_state(address, width)
-        value = self.state["input"][address : address + width]
-        log.debug(
-            "Reading input registers from 0x%s - 0x%s Value: %s",
-            f"{address:04x}",
-            f"{address + width:04x}",
-            value.value_to_hex(),
-        )
-        return value
+
+        registers = self.state["input"][address : address + width]
+        if isinstance(registers, Words):
+            return registers
+        if isinstance(registers, Bits):
+            # Convert to Words if necessary
+            return Words([registers.value_to_int()])
+        return Words([registers])
 
     def read_holding_register(self, address: int, update: bool = False) -> int:
-        """Read the value of a holding register.
-
-        Args:
-            address: The address of the holding register to read.
-            update: Whether to update the state of the holding register.
-
-        """
+        """Read a single holding register at the specified address."""
         if update:
-            self._update_holding_state(address)
-        value = self.state["holding"][address]
-        log.debug(
-            "Reading holding register 0x%s Value: %s",
-            f"{address:04x}",
-            value.value_to_int(),
-        )
-        return value.value_to_int()
+            self._update_holding_state(address, 1)
+
+        register_value = self.state["holding"][address]
+        if isinstance(register_value, Words) or isinstance(register_value, Bits):
+            return register_value.value_to_int()
+        return register_value
 
     def read_holding_registers(
         self, address: int, width: int, update: bool = False
     ) -> Words:
-        """Read the values of a range of holding registers.
-
-        Args:
-            address: The address of the first holding register to read.
-            width: The number of holding registers to read.
-            update: Whether to update the state of the holding registers.
-
-        """
+        """Read multiple holding registers starting at the specified address."""
         if update:
             self._update_holding_state(address, width)
-        value = self.state["holding"][address : address + width]
-        log.debug(
-            "Reading holding registers from 0x%s - 0x%s Value: %s",
-            f"{address:04x}",
-            f"{address + width:04x}",
-            value.value_to_hex(),
-        )
-        return value
+
+        registers = self.state["holding"][address : address + width]
+        if isinstance(registers, Words):
+            return registers
+        if isinstance(registers, Bits):
+            # Convert to Words if necessary
+            return Words([registers.value_to_int()])
+        return Words([registers])
 
     def read_discrete_input(self, address: int, update: bool = False) -> bool:
-        """Read the value of a discrete input.
-
-        Args:
-            address: The address of the discrete input to read.
-            update: Whether to update the state of the discrete input.
-
-        """
+        """Read a discrete input at the specified address."""
         if update:
-            self._update_discrete_state(address)
-        value = self.state["discrete"][address]
-        log.debug("Reading discrete input %d Value: %s", address, value)
-        return bool(value)
+            self._update_discrete_state(address, 1)
+
+        input_value = self.state["discrete"][address]
+        if isinstance(input_value, Bits):
+            return bool(input_value.value_to_int())
+        return bool(input_value)
 
     def read_discrete_inputs(
         self, address: int, width: int, update: bool = False
@@ -604,18 +601,14 @@ class ModbusConnection:
         return value
 
     def read_coil(self, address: int, update: bool = False) -> bool:
-        """Read the value of a coil.
-
-        Args:
-            address: The address of the coil to read.
-            update: Whether to update the state of the coil.
-
-        """
+        """Read a coil at the specified address."""
         if update:
-            self._update_coil_state(address)
-        value = self.state["coil"][address]
-        log.debug("Reading coil 0x%s Value: %s", f"{address:04x}", value)
-        return bool(value)
+            self._update_coil_state(address, 1)
+
+        coil_value = self.state["coil"][address]
+        if isinstance(coil_value, Bits):
+            return bool(coil_value.value_to_int())
+        return bool(coil_value)
 
     def read_coils(self, address: int, width: int, update: bool = False) -> Bits:
         """Read the values of a range of coils.
@@ -705,22 +698,41 @@ class ModbusConnection:
         self.modbus_tcp_client.write_registers(address, registers.value)
         self._update_holding_state()
 
-    def register_channel_callback(self, modbus_channel: "ModbusChannel", wago_channel: 'WagoChannel') -> None:
+    def register_channel_callback(
+        self, modbus_channel: "ModbusChannel", wago_channel: "WagoChannel"
+    ) -> None:
         """Register a callback to be called when a channel value changes."""
         if modbus_channel.channel_type not in self._channel_registry:
-            log.warning("Cannot register callback for unsupported channel type: %s", modbus_channel.channel_type)
+            log.warning(
+                "Cannot register callback for unsupported channel type: %s",
+                modbus_channel.channel_type,
+            )
             return
 
-        if modbus_channel.address not in self._channel_registry[modbus_channel.channel_type]:
-            self._channel_registry[modbus_channel.channel_type][modbus_channel.address] = []
+        if (
+            modbus_channel.address
+            not in self._channel_registry[modbus_channel.channel_type]
+        ):
+            self._channel_registry[modbus_channel.channel_type][
+                modbus_channel.address
+            ] = []
 
-        self._channel_registry[modbus_channel.channel_type][modbus_channel.address].append(wago_channel)
+        self._channel_registry[modbus_channel.channel_type][
+            modbus_channel.address
+        ].append(wago_channel)
 
-    def unregister_channel_callback(self, modbus_channel: "ModbusChannel", wago_channel: 'WagoChannel') -> None:
+    def unregister_channel_callback(
+        self, modbus_channel: "ModbusChannel", wago_channel: "WagoChannel"
+    ) -> None:
         """Unregister a callback for a channel."""
-        if (modbus_channel.channel_type in self._channel_registry and
-            modbus_channel.address in self._channel_registry[modbus_channel.channel_type]):
-            channel_list = self._channel_registry[modbus_channel.channel_type][modbus_channel.address]
+        if (
+            modbus_channel.channel_type in self._channel_registry
+            and modbus_channel.address
+            in self._channel_registry[modbus_channel.channel_type]
+        ):
+            channel_list = self._channel_registry[modbus_channel.channel_type][
+                modbus_channel.address
+            ]
             if wago_channel in channel_list:
                 channel_list.remove(wago_channel)
 

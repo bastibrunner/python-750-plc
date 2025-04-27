@@ -2,14 +2,17 @@
 
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 
-from typing import List, Generator
+from collections.abc import Generator
+from typing import List
 
 import pytest
 from pytest_socket import enable_socket, socket_allow_hosts
-from wg750xxx.wg750xxx import PLCHub
+
+from wg750xxx.modules.module import WagoModule
 from wg750xxx.modules.spec import IOType
 from wg750xxx.settings import HubConfig, ModuleConfig
-from wg750xxx.modules.module import WagoModule
+from wg750xxx.wg750xxx import PLCHub
+
 
 @pytest.fixture(scope="module")
 def hub() -> Generator[PLCHub, None, None]:
@@ -20,7 +23,9 @@ def hub() -> Generator[PLCHub, None, None]:
         hub_instance = PLCHub(HubConfig(host="10.22.22.16", port=502), True)
         yield hub_instance
     except Exception as e:
-        pytest.skip(f"Test skipped: Need physical PLC connection, but failed to create Hub instance: {e}")
+        pytest.skip(
+            f"Test skipped: Need physical PLC connection, but failed to create Hub instance: {e}"
+        )
 
 
 @pytest.fixture(scope="module")
@@ -59,9 +64,7 @@ def test_read_register(hub: PLCHub) -> None:
     # Store register values for debugging
     _discrete_inputs = register.bits
 
-    register = client.read_coils(
-        0x0200, count=80
-    )  # hub.count_bits_digital_out
+    register = client.read_coils(0x0200, count=80)  # hub.count_bits_digital_out
     # Store register values for debugging
     _coils = register.bits
 
@@ -76,30 +79,26 @@ def test_module_count(hub: PLCHub) -> None:
     assert isinstance(modules, WagoModule), (
         f"Error: expected 1 analog output modules, got {len(modules)}"
     )
-    modules = hub.modules.get(IOType(digital=True,input=True))
+    modules = hub.modules.get(IOType(digital=True, input=True))
     assert len(modules) == 19, (
         f"Error: expected 19 digital input modules, got {len(modules)}"
     )
-    modules = hub.modules.get(IOType(digital=True,output=True))
+    modules = hub.modules.get(IOType(digital=True, output=True))
     assert len(modules) == 17, (
         f"Error: expected 17 digital output modules, got {len(modules)}"
     )
 
 
-
 def test_module_count_total(hub: PLCHub) -> None:
     """Test counting total modules."""
-    assert len(hub.modules) == 47, (
-        f"Error: expected 47 modules, got {len(hub.modules)}"
-    )
-
+    assert len(hub.modules) == 47, f"Error: expected 47 modules, got {len(hub.modules)}"
 
 
 def test_module_digital_input_bits_match(hub: PLCHub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
         module.spec.modbus_channels["discrete"]
-        for module in hub.modules.get(IOType(digital=True,input=True))
+        for module in hub.modules.get(IOType(digital=True, input=True))
         if module.spec.io_type.input
     )
     assert digital_input_bits == 146, (
@@ -107,18 +106,16 @@ def test_module_digital_input_bits_match(hub: PLCHub) -> None:
     )
 
 
-
 def test_module_digital_output_bits_match(hub: PLCHub) -> None:
     """Test matching digital output bits."""
     digital_outputs_bits = sum(
         module.spec.modbus_channels["coil"]
-        for module in hub.modules.get(IOType(digital=True,output=True))
+        for module in hub.modules.get(IOType(digital=True, output=True))
         if module.spec.io_type.output
     )
     assert digital_outputs_bits == 80, (
         f"Error: expected 80 digital output bits, got {digital_outputs_bits}"
     )
-
 
 
 def test_module_analog_input_bits_match(hub: PLCHub) -> None:
@@ -136,7 +133,6 @@ def test_module_analog_input_bits_match(hub: PLCHub) -> None:
     )
 
 
-
 def test_module_analog_output_bits_match(hub: PLCHub) -> None:
     """Test matching analog output bits."""
     analog_outputs_bits = (
@@ -152,7 +148,6 @@ def test_module_analog_output_bits_match(hub: PLCHub) -> None:
     )
 
 
-
 def test_channel_count_match_all_modules(hub: PLCHub) -> None:
     """Test matching channel counts for all modules."""
     for module in hub.modules:
@@ -163,6 +158,7 @@ def test_channel_count_match_all_modules(hub: PLCHub) -> None:
         assert channels_spec == channels_actual, (
             f"Error: expected {channels_spec} channels, got {channels_actual}"
         )
+
 
 def test_module_counter_count(hub: PLCHub) -> None:
     """Test counter count."""
@@ -178,8 +174,9 @@ def test_module_counter_count(hub: PLCHub) -> None:
         value = module.channels[0].read()
         assert isinstance(value, int)
 
+
 @pytest.mark.parametrize(
-    "module_idx,modbus_channel_type",
+    ("module_idx", "modbus_channel_type"),
     [
         (1, "Int16 Out"),
         (2, "Digital Out"),
@@ -226,7 +223,7 @@ def test_module_counter_count(hub: PLCHub) -> None:
         (43, "Digital In"),
         (44, "Digital In"),
         (45, "Digital In"),
-        (46, "Dali")
+        (46, "Dali"),
     ],
 )
 def test_module_channel_type(
@@ -239,9 +236,8 @@ def test_module_channel_type(
         )
 
 
-
 @pytest.mark.parametrize(
-    "module_idx,modbus_channel_type,start_address",
+    ("module_idx", "modbus_channel_type", "start_address"),
     [
         (1, "holding", 0x0000),
         (2, "coil", 0x0000),

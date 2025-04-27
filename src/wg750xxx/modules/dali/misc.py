@@ -21,6 +21,7 @@ def check_value_range(value: int, min_value: int, max_value: int, name: str) -> 
     if not min_value <= value <= max_value:
         raise ValueError(f"{name} must be between {min_value} and {max_value}")
 
+
 def dali_response_to_channel_list(
     response: DaliInputMessage | None, offset: int = 0
 ) -> list[int]:
@@ -31,7 +32,13 @@ def dali_response_to_channel_list(
     channels.extend(
         [offset + i for bit, i in iterate_bits(response.dali_response) if bit]
     )
-    channels.extend([offset + 8 + i for bit, i in iterate_bits(response.message_3) if bit])
-    channels.extend([offset + 16 + i for bit, i in iterate_bits(response.message_2) if bit])
-    channels.extend([offset + 24 + i for bit, i in iterate_bits(response.message_1) if bit])
+    channels.extend(
+        [offset + 8 + i for bit, i in iterate_bits(response.message_3) if bit]
+    )
+    channels.extend(
+        [offset + 16 + i for bit, i in iterate_bits(response.message_2) if bit]
+    )
+    channels.extend(
+        [offset + 24 + i for bit, i in iterate_bits(response.message_1) if bit]
+    )
     return channels

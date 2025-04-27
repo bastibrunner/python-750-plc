@@ -3,12 +3,11 @@
 import asyncio
 from enum import Enum
 import time
-from typing import Any, Callable, Optional, Set, Self
+from typing import Any, Callable, Optional, Self, Set
 
 from ...modbus.state import Coil, Discrete
 from ..channel import WagoChannel
 from ..exceptions import WagoModuleError
-
 
 
 class DigitalIn(WagoChannel):
@@ -39,8 +38,7 @@ class DigitalIn(WagoChannel):
         """Get an instance of the channel."""
         if self.config.device_class == "event_button":
             return EventButton(self.modbus_channel, self.config)
-        else:
-            return self
+        return self
 
     def read(self) -> bool:
         """Read the state of the digital input channel."""
@@ -89,9 +87,12 @@ class DigitalOut(WagoChannel):
         """Write a value to the digital output channel."""
         self.modbus_channel.write(value)
 
-    def read(self) -> bool | str:
+    def read(self) -> bool:
         """Read the state of the digital output channel."""
-        return self.modbus_channel.read()
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
+        return bool(self.modbus_channel.read())
+
 
 class DigitalEvent(Enum):
     """Digital events."""
@@ -101,7 +102,6 @@ class DigitalEvent(Enum):
     PRESSED = "pressed"
     HOLD_START = "hold_start"
     HOLD_END = "hold_end"
-
 
 
 class EventButton(DigitalIn):
@@ -122,16 +122,27 @@ class EventButton(DigitalIn):
 
     # Configuration constants
     DEBOUNCE_TIMEOUT = 0.05  # seconds to ignore rapid changes
-    SHORT_PRESS_TIMEOUT = 0.5  # if the button is released before this time, it's a short press
+    SHORT_PRESS_TIMEOUT = (
+        0.5  # if the button is released before this time, it's a short press
+    )
     HOLD_DURATION = 0.8  # if the button is held for at least this long, it's a hold
-    DOUBLE_TAP_TIMEOUT = 0.5  # if the button is pressed again within this time, it's a double tap
+    DOUBLE_TAP_TIMEOUT = (
+        0.5  # if the button is pressed again within this time, it's a double tap
+    )
 
-    def __init__(self, *args: Any, from_channel: DigitalIn|None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: Any, from_channel: DigitalIn | None = None, **kwargs: Any
+    ) -> None:
         """Initialize the event button channel."""
         if from_channel is None:
             super().__init__(*args, **kwargs)
         else:
-            super().__init__(from_channel.modbus_channel, from_channel.config, from_channel.channel_index, from_channel.on_change_callback)
+            super().__init__(
+                from_channel.modbus_channel,
+                from_channel.config,
+                from_channel.channel_index,
+                from_channel.on_change_callback,
+            )
         self._last_state: bool = False
         self._last_press_time: Optional[float] = None
         self._last_release_time: Optional[float] = None
@@ -150,7 +161,6 @@ class EventButton(DigitalIn):
                 self.modbus_channel, self._handle_raw_state_change
             )
 
-
     def _handle_raw_state_change(self, value: bool) -> None:
         """Handle raw state changes from the modbus channel.
 
@@ -159,13 +169,14 @@ class EventButton(DigitalIn):
 
         Args:
             value: The new binary state value
+
         """
         current_time = time.time()
 
         # Skip if change is too quick (debounce)
         if current_time - self._last_state_change_time < self.DEBOUNCE_TIMEOUT:
             return
-        self._cancel_all_pending_tasks() # Cancel any pending tasks, since we're getting a new state change
+        self._cancel_all_pending_tasks()  # Cancel any pending tasks, since we're getting a new state change
 
         # Button was just pressed
         if value and not self._last_state:
@@ -187,10 +198,13 @@ class EventButton(DigitalIn):
         task = asyncio.create_task(self._check_for_hold())
         self._pending_tasks.add(task)
 
-
     def _handle_press_end_event(self) -> None:
         """Handle the press end event."""
-        if self._current_press_duration <= self.SHORT_PRESS_TIMEOUT:
+        press_time = 0.0
+        if self._press_start_time is not None:
+            press_time = self._current_press_duration
+
+        if press_time <= self.SHORT_PRESS_TIMEOUT:
             if self._pending_event is None:
                 self._pending_event = DigitalEvent.DOUBLE_TAP
                 task = asyncio.create_task(self._check_for_short_press())
@@ -237,12 +251,12 @@ class EventButton(DigitalIn):
             await asyncio.sleep(0.1)  # Check periodically
         self._trigger_event(DigitalEvent.HOLD_END)
 
-
     def _trigger_event(self, event: DigitalEvent) -> None:
         """Trigger an event and call the callback.
 
         Args:
             event: The event to trigger
+
         """
         self._last_event = event
         if event in (DigitalEvent.PRESSED, DigitalEvent.DOUBLE_TAP):
@@ -257,15 +271,19 @@ class EventButton(DigitalIn):
 
         Returns:
             The callback function or None if not set
+
         """
         return self._raw_callback
 
     @on_change_callback.setter
-    def on_change_callback(self, callback: Callable[[Any, Any | None], None] | None) -> None:
+    def on_change_callback(
+        self, callback: Callable[[Any, Any | None], None] | None
+    ) -> None:
         """Set the callback function that gets called when an event is detected.
 
         Args:
             callback: The callback function to set
+
         """
         self._raw_callback = callback
 
@@ -274,6 +292,7 @@ class EventButton(DigitalIn):
 
         Returns:
             The current event state as string or empty string if no event
+
         """
         return self._last_event.value if self._last_event else None
 
@@ -284,10 +303,12 @@ class EventButton(DigitalIn):
         callback = self.on_change_callback
 
         # Call the callback directly without checking update interval
-        if hasattr(callback, '__code__'):
+        if hasattr(callback, "__code__"):
             if callback.__code__.co_argcount == 1:
                 callback(new_value)
             elif callback.__code__.co_argcount == 2:
                 callback(new_value, self)
             else:
-                raise ValueError(f"Callback function {callback.__name__} has {callback.__code__.co_argcount} arguments, expected 1 or 2")
+                raise ValueError(
+                    f"Callback function {callback.__name__} has {callback.__code__.co_argcount} arguments, expected 1 or 2"
+                )

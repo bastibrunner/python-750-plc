@@ -25,4 +25,10 @@ class Wg750Counter(WagoModule):
         """Create channels for the module."""
         if self.modbus_address is None:
             raise WagoModuleError("Can not create channels, modbus address is not set")
-        self.append_channel(Counter32Bit(CounterCommunicationRegister(self.modbus_connection, self.modbus_address)))
+        self.append_channel(
+            Counter32Bit(
+                CounterCommunicationRegister(
+                    self.modbus_connection, self.modbus_address
+                )
+            )
+        )

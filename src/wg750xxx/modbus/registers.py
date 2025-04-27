@@ -6,6 +6,7 @@ from typing import Self
 
 import numpy as np
 
+
 class Bits:
     """A class to represent a Modbus one bit register of any length."""
 
@@ -83,7 +84,7 @@ class Bits:
             [f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bits if b != 0]
         ).rstrip("\x00")
 
-    def __getitem__(self, index: slice | int) -> Self | list[Self]| bool:
+    def __getitem__(self, index: slice | int) -> Self | bool:
         """Get the bit register content at a specific index or slice."""
         if isinstance(index, slice):
             return Bits(self._bits[index])
@@ -119,7 +120,7 @@ class Bits:
     def __contains__(self, item) -> bool:
         """Check if the bit register contains a specific item."""
         if isinstance(item, Words):
-            return item.value.base is self.value
+            return np.array_equal(item.value, self.value)
         return False
 
     def __eq__(self, other) -> bool:
@@ -139,7 +140,6 @@ class Bits:
         return hash(self._bits)
 
 
-
 class Bytes:
     """A class to represent a Modbus byte (8-bit) register of any length.
 
@@ -153,16 +153,25 @@ class Bytes:
                 the size of the value. If the size is greater than the size of the
                 value, the byte register will be padded with zeros. If the size is
                 less than the size of the value, the byte register will be truncated.
+
     """
 
-    def __init__(self, value: list[int] | np.ndarray[tuple[int, ...], np.dtype[np.uint8]] | int | None = None, size: int = 0) -> None:
+    def __init__(
+        self,
+        value: list[int]
+        | np.ndarray[tuple[int, ...], np.dtype[np.uint8]]
+        | int
+        | None = None,
+        size: int = 0,
+    ) -> None:
         """Initialize the Bytes class."""
         if value is None:
             self._bytes = np.array([], dtype=np.uint8)
         elif isinstance(value, np.ndarray):
             self._bytes = value
         elif isinstance(value, int):
-            self._bytes = self._from_int(value)
+            bytes_obj = self._from_int(value)
+            self._bytes = bytes_obj._bytes
         else:
             self._bytes = np.array(value, dtype=np.uint8)
         if size == 0:
@@ -183,18 +192,17 @@ class Bytes:
         """Convert an integer to a byte register."""
         if value < 256:
             return Bytes(np.array([value], dtype=np.uint8))
+        # split the integer into bytes
+        values = np.array([], dtype=np.uint8)
+        if byteorder == "big":
+            while value > 0:
+                values = np.insert(values, 0, value & 0xFF)
+                value >>= 8
         else:
-            # split the integer into bytes
-            values = np.array([], dtype=np.uint8)
-            if byteorder == "big":
-                while value > 0:
-                    values = np.insert(values, 0, value & 0xFF)
-                    value >>= 8
-            else:
-                while value > 0:
-                    values = np.append(values, value & 0xFF)
-                    value >>= 8
-            return Bytes(values)
+            while value > 0:
+                values = np.append(values, value & 0xFF)
+                value >>= 8
+        return Bytes(values)
 
     def __len__(self) -> int:
         """Get the length of the byte register."""
@@ -208,7 +216,9 @@ class Bytes:
     @value.setter
     def value(self, value: list[int]) -> None:
         if len(value) != self._bytes.size:
-            raise ValueError(f"Invalid value length, register has {self._bytes.size} bytes, got {len(value)}")
+            raise ValueError(
+                f"Invalid value length, register has {self._bytes.size} bytes, got {len(value)}"
+            )
         self._bytes[...] = np.array(value, dtype=np.uint8)
 
     def __str__(self) -> str:
@@ -219,7 +229,7 @@ class Bytes:
         """Get the string representation of the byte register."""
         return f"{self._bytes}"
 
-    def copy(self) -> "Bytes":
+    def copy(self) -> Self:
         """Copy the byte register."""
         return Bytes(self._bytes.copy())
 
@@ -233,7 +243,7 @@ class Bytes:
 
     def value_to_int(self, byteorder: str = "little") -> int:
         """Get the byte register content as integer representation."""
-        return int.from_bytes(self._bytes, byteorder=byteorder)
+        return int.from_bytes(bytes(self._bytes.tolist()), byteorder=byteorder)
 
     def bits(self) -> Bits:
         """Get the byte register content as bit register."""
@@ -253,18 +263,21 @@ class Bytes:
 
     def value_to_string(self) -> str:
         """Get the byte register content as string representation."""
-        return "".join([f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bytes if b != 0]
+        return "".join(
+            [f"{chr(b & 0x00FF)}{chr(b >> 8)}" for b in self._bytes if b != 0]
         ).rstrip("\x00")
 
-    def __getitem__(self, index: slice | int) -> "Bytes":
+    def __getitem__(self, index: slice | int) -> Self:
         """Get the byte register content at a specific index or slice."""
         if isinstance(index, slice):
             return Bytes(self._bytes[index])
         if isinstance(index, int):
-            return Bytes([self._bytes[index]])
-        raise ValueError(f"Invalid index type: {type(index)}")
+            return Bytes(np.array([self._bytes[index]], dtype=np.uint8))
+        raise TypeError(f"Invalid index type: {type(index)}")
 
-    def __setitem__(self, index: int | slice | EllipsisType, value: int | list[int]) -> None:
+    def __setitem__(
+        self, index: int | slice | EllipsisType, value: int | list[int]
+    ) -> None:
         """Set the byte register content at a specific index or slice."""
         if isinstance(index, EllipsisType):
             self._bytes[...] = np.array(value, dtype=np.uint8)
@@ -305,11 +318,15 @@ class Words:
                 the size of the value. If the size is greater than the size of the
                 value, the word register will be padded with zeros. If the size is
                 less than the size of the value, the word register will be truncated.
+
     """
 
     def __init__(
         self,
-        value: list[int] | np.ndarray[tuple[int, ...], np.dtype[np.uint16]] | int | None = None,
+        value: list[int]
+        | np.ndarray[tuple[int, ...], np.dtype[np.uint16]]
+        | int
+        | None = None,
         size: int = 0,
     ) -> None:
         """Initialize the Words class."""
@@ -339,15 +356,14 @@ class Words:
         """Convert an integer to a word register."""
         if value < 65536:
             return Words(np.array([value], dtype=np.uint16))
-        else:
-            # split the integer into bytes
-            values = np.array([], dtype=np.uint16)
-            while value > 0:
-                values = np.insert(values, 0, value & 0xFFFF)
-                value >>= 16
-            return Words(values)
+        # split the integer into bytes
+        values = np.array([], dtype=np.uint16)
+        while value > 0:
+            values = np.insert(values, 0, value & 0xFFFF)
+            value >>= 16
+        return Words(values)
 
-    def copy(self) -> "Words":
+    def copy(self) -> Self:
         """Copy the word register."""
         return Words(self._words.copy())
 
@@ -367,7 +383,9 @@ class Words:
     @value.setter
     def value(self, value: list[int]) -> None:
         if len(value) != self._words.size:
-            raise ValueError(f"Invalid value length, register has {self._words.size} words, got {len(value)}")
+            raise ValueError(
+                f"Invalid value length, register has {self._words.size} words, got {len(value)}"
+            )
         self._words[...] = np.array(value, dtype=np.uint16)
 
     # def value(self, value: list[int], start: int = 0):
@@ -375,7 +393,7 @@ class Words:
 
     def value_to_hex(self) -> str:
         """Get the word register content as hexadecimal string representation."""
-        return "".join([f"{b:04X}" for b in self._words])
+        return "".join([f"{w:04X}" for w in self._words])
 
     def value_to_bin(self) -> str:
         """Get the word register content as binary string representation."""
@@ -383,9 +401,10 @@ class Words:
 
     def value_to_int(self) -> int:
         """Get the word register content as integer representation."""
-        if self._words.size > 1:
-            return self.bytes("little").value_to_int("big")
-        return int(self._words[0])
+        result = 0
+        for i, word in enumerate(self._words):
+            result |= word << (16 * i)
+        return result
 
     def bits(self) -> Bits:
         """Get the word register content as bit register."""
@@ -434,7 +453,7 @@ class Words:
             return Words(self._words[index])
         if isinstance(index, int):
             return Words([self._words[index]])
-        raise ValueError(f"Invalid index type: {type(index)}")
+        raise TypeError(f"Invalid index type: {type(index)}")
 
     def __setitem__(
         self, index: int | slice | EllipsisType, value: int | list[int]
@@ -464,7 +483,7 @@ class Words:
     def __contains__(self, item) -> bool:
         """Check if the word register contains a specific item."""
         if isinstance(item, Words):
-            return item.value.base is self.value
+            return np.array_equal(item.value, self.value)
         return False
 
     def __eq__(self, other) -> bool:
@@ -482,7 +501,6 @@ class Words:
     def __hash__(self) -> int:
         """Get the hash of the word register."""
         return hash(self._words)
-
 
 
 class Register(Words):

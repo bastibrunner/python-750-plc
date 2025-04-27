@@ -2,10 +2,10 @@
 
 # pylint: disable=unused-variable,too-many-public-methods
 
-from .dali_communication import DaliOutputMessage
 from .channel_base import DaliChannelBase
-
+from .dali_communication import DaliOutputMessage
 from .misc import check_value_range, iterate_bits
+
 
 class DaliChannelSetup(DaliChannelBase):
     """DALI commands."""
@@ -90,8 +90,6 @@ class DaliChannelSetup(DaliChannelBase):
         """Save DTR as short address."""
         self._send_config_command(0b10000000)
 
-
-
     # 160. Get current value
     def get_current_value(self) -> int:
         """Get current value."""
@@ -134,18 +132,10 @@ class DaliChannelSetup(DaliChannelBase):
     def get_groups(self) -> list[int]:
         """Get groups."""
         # Get Group 1-8
-        groups = [
-            i
-            for bit, i in iterate_bits(self._read_command(0b11000000))
-            if bit
-        ]
+        groups = [i for bit, i in iterate_bits(self._read_command(0b11000000)) if bit]
         # Get Group 9-16
         groups.extend(
-            [
-                i
-                for bit, i in iterate_bits(self._read_command(0b11000001))
-                if bit
-            ]
+            [i for bit, i in iterate_bits(self._read_command(0b11000001)) if bit]
         )
         return groups
 

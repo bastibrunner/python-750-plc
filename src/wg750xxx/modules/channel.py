@@ -1,10 +1,9 @@
 """Module for handling the channels of a Wago Module."""
 
+from collections.abc import Callable
 import logging
 import time
 from typing import Any, Literal, Self
-from collections.abc import Callable
-
 
 from ..const import DEFAULT_SCAN_INTERVAL
 from ..modbus.state import ModbusChannel
@@ -79,11 +78,14 @@ class WagoChannel:
             value_template=self.value_template,
             update_interval=self.update_interval,
         )
-        self._on_change_callback: Callable[[Any, Any | None], None] | None = on_change_callback
+        self._on_change_callback: Callable[[Any, Any | None], None] | None = (
+            on_change_callback
+        )
 
     def auto_generated_name(self) -> str:
         """Generate a name for the channel."""
-        return f"{self.channel_type} {self.channel_index + 1 or ''}".rstrip()
+        index_value = self.channel_index if self.channel_index is not None else ""
+        return f"{self.channel_type} {index_value}".rstrip()
 
     @property
     def name(self) -> str:
@@ -115,8 +117,7 @@ class WagoChannel:
         """Get a string representation of the channel."""
         if self.modbus_channel is None:
             return f"{self.channel_type} (no modbus address)"
-        else:
-            return f"{self.channel_type} {self.modbus_channel.address}"
+        return f"{self.channel_type} {self.modbus_channel.address}"
 
     def __repr__(self) -> str:
         """Get a representation of the channel."""
@@ -166,29 +167,46 @@ class WagoChannel:
         return self._on_change_callback
 
     @on_change_callback.setter
-    def on_change_callback(self, callback: Callable[[Any, Any | None], None] | None) -> None:
+    def on_change_callback(
+        self, callback: Callable[[Any, Any | None], None] | None
+    ) -> None:
         """Set the callback function that gets called when the channel value changes."""
         self._on_change_callback = callback
 
         # If we have a modbus channel and a valid callback, register with ModbusConnection
         if self.modbus_channel is not None and callback is not None:
-            if hasattr(self.modbus_channel, 'modbus_connection') and hasattr(self.modbus_channel.modbus_connection, 'register_channel_callback'):
-                self.modbus_channel.modbus_connection.register_channel_callback(self.modbus_channel, self)
+            if hasattr(self.modbus_channel, "modbus_connection") and hasattr(
+                self.modbus_channel.modbus_connection, "register_channel_callback"
+            ):
+                self.modbus_channel.modbus_connection.register_channel_callback(
+                    self.modbus_channel, self
+                )
         elif self.modbus_channel is not None and callback is None:
             # Unregister if callback is set to None
-            if hasattr(self.modbus_channel, 'modbus_connection') and hasattr(self.modbus_channel.modbus_connection, 'unregister_channel_callback'):
-                self.modbus_channel.modbus_connection.unregister_channel_callback(self.modbus_channel, self)
+            if hasattr(self.modbus_channel, "modbus_connection") and hasattr(
+                self.modbus_channel.modbus_connection, "unregister_channel_callback"
+            ):
+                self.modbus_channel.modbus_connection.unregister_channel_callback(
+                    self.modbus_channel, self
+                )
 
     def notify_value_change(self, new_value: Any) -> None:
         """Notify the channel that its value has changed."""
-        if (self.update_interval is None
+        if (
+            self.update_interval is None
             or self._on_change_callback is None
-            or time.time() - self._last_update < self.update_interval / 1000):
+            or time.time() - self._last_update < self.update_interval / 1000
+        ):
             return
         self._last_update = time.time()
-        if self._on_change_callback.__code__.co_argcount == 1:
+        code = getattr(self._on_change_callback, "__code__", None)
+        if code is None or not hasattr(code, "co_argcount"):
+            self._on_change_callback(new_value, self)
+        elif code.co_argcount == 1:
             self._on_change_callback(new_value)
-        elif self._on_change_callback.__code__.co_argcount == 2:
+        elif code.co_argcount == 2:
             self._on_change_callback(new_value, self)
         else:
-            raise ValueError(f"Callback function {self._on_change_callback.__name__} has {self._on_change_callback.__code__.co_argcount} arguments, expected 1 or 2")
+            raise ValueError(
+                f"Callback function has {code.co_argcount} arguments, expected 1 or 2"
+            )

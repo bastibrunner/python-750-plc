@@ -139,7 +139,9 @@ class Float16In(WagoChannel):
 
     def read(self) -> float:
         """Read the value of the channel."""
-        return self.modbus_channel.read()
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
+        return float(self.modbus_channel.read())
 
     def write(self, value: Any) -> None:
         """Write a value to the channel."""
@@ -161,8 +163,12 @@ class Float16Out(WagoChannel):
 
     def write(self, value: float) -> None:
         """Write a value to the channel."""
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         self.modbus_channel.write(value)
 
     def read(self) -> float:
         """Read the value of the channel."""
-        return self.modbus_channel.read()
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
+        return float(self.modbus_channel.read())

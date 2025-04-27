@@ -45,9 +45,15 @@ class DaliChannel(DaliChannelCommands, WagoChannel):
             channel_type=self.channel_type,
             **kwargs,
         )
-        self.status: DaliChannelStatus = DaliChannelStatus(self.dali_address, self.dali_communication_register)
-        self.setup: DaliChannelSetup = DaliChannelSetup(self.dali_address, self.dali_communication_register)
-        self.commands: DaliChannelCommands = DaliChannelCommands(self.dali_address, self.dali_communication_register)
+        self.status: DaliChannelStatus = DaliChannelStatus(
+            self.dali_address, self.dali_communication_register
+        )
+        self.setup: DaliChannelSetup = DaliChannelSetup(
+            self.dali_address, self.dali_communication_register
+        )
+        self.commands: DaliChannelCommands = DaliChannelCommands(
+            self.dali_address, self.dali_communication_register
+        )
 
     @property
     def brightness(self) -> int:

@@ -3,9 +3,7 @@
 # pylint: disable=unused-variable,too-many-public-methods
 import logging
 
-from .dali_communication import (
-    DaliCommunicationRegister,
-)
+from .dali_communication import DaliCommunicationRegister
 
 log = logging.getLogger(__name__)
 

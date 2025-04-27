@@ -13,12 +13,14 @@ This module provides a high-level abstraction that represents the PLC Hub and it
 ### Core Components
 
 - **Hub Class**: The main interface to the PLC system
+
   - Manages Modbus TCP connection
   - Automatically detects connected modules
   - Handles configuration management
   - Provides access to all connected modules
 
 - **Module Classes**: Abstract representations of physical PLC modules
+
   - Each module type has its own implementation
   - Inherits from a base module class
   - Handles module-specific Modbus register configurations
@@ -39,6 +41,7 @@ The module uses a YAML-based configuration system to store additional informatio
 - Input/output relationships
 
 The configuration can be:
+
 - Read from a YAML file during runtime
 - Modified through Python code
 - Persisted back to the YAML file
@@ -131,8 +134,7 @@ modules:
     name: "Wall Switches"
     channels:
       - name: "Living Room Light"
-        mapping:
-          Light_Dimmers_Living_Room_Dimmer
+        mapping: Light_Dimmers_Living_Room_Dimmer
         logic:
           - type: "short_press"
             action: "toggle"
@@ -499,16 +501,16 @@ After reviewing the wg750xxx module code, here's the current implementation stat
 ### Improvement Suggestions
 
 1. **Complete Test Coverage**: Implement tests for all module types, including analog, counter, and controller modules.
-3. **Async Support**: Add async support to the module. Polling and state updates should be async.
+2. **Async Support**: Add async support to the module. Polling and state updates should be async.
 3. **Special Module Configuration**: Add special module configuration auto discovery. New module implementations should be added to the `modules` folder and be auto discovered, if they have special configuration options, their config should be available in the api, so that the frontend can show it (eg. DALI groups).
 4. **Module Removal**: Add module change handling. When discovered modules do not match the config, the api should handle this gracefully, but notify the user that configuration has changed, so that they can update the config.
-2. **Enhance Error Handling**: Add more comprehensive error checking and recovery mechanisms.
-3. **Improve Documentation**: Add detailed usage examples for each module type.
-4. **Value Mapping Enhancements**: Expand value transformation capabilities, particularly for analog modules.
-5. **Event System Implementation**: Complete the implementation of the event handling system described in the overview.
-6. **Configuration Validation**: Strengthen configuration validation to ensure compatibility with physical hardware.
-7. **Code Comments**: Add more explanatory comments in complex parts of the code.
-8. **Performance Optimization**: Review and optimize polling mechanisms for better performance.
+5. **Enhance Error Handling**: Add more comprehensive error checking and recovery mechanisms.
+6. **Improve Documentation**: Add detailed usage examples for each module type.
+7. **Value Mapping Enhancements**: Expand value transformation capabilities, particularly for analog modules.
+8. **Event System Implementation**: Complete the implementation of the event handling system described in the overview.
+9. **Configuration Validation**: Strengthen configuration validation to ensure compatibility with physical hardware.
+10. **Code Comments**: Add more explanatory comments in complex parts of the code.
+11. **Performance Optimization**: Review and optimize polling mechanisms for better performance.
 
 ### Priority Tasks
 

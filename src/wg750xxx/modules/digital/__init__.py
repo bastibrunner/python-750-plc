@@ -1,5 +1,10 @@
 """Digital Modules."""
 
-from wg750xxx.modules.digital.channels import DigitalIn, DigitalOut, EventButton, DigitalEvent
+from wg750xxx.modules.digital.channels import (
+    DigitalEvent,
+    DigitalIn,
+    DigitalOut,
+    EventButton,
+)
 
-__all__ = ["DigitalIn", "DigitalOut", "EventButton", "DigitalEvent"]
+__all__ = ["DigitalEvent", "DigitalIn", "DigitalOut", "EventButton"]

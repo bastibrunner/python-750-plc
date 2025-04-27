@@ -5,9 +5,9 @@ import logging
 
 import pytest
 
-from wg750xxx.wg750xxx import PLCHub, ControllerInfo
-from wg750xxx.settings import HubConfig, ModuleConfig
 from wg750xxx.modbus.state import ModbusConnection
+from wg750xxx.settings import HubConfig, ModuleConfig
+from wg750xxx.wg750xxx import ControllerInfo, PLCHub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 
@@ -20,13 +20,25 @@ def test_controller_info_read(basic_hub: PLCHub) -> None:
     """Test that controller info is read correctly."""
     controller_info = basic_hub.info
 
-    assert isinstance(controller_info, ControllerInfo), "Controller info should be a ControllerInfo object"
-    assert hasattr(controller_info, "REVISION"), "Controller info should have a REVISION field"
-    assert hasattr(controller_info, "SERIES"), "Controller info should have a SERIES field"
+    assert isinstance(controller_info, ControllerInfo), (
+        "Controller info should be a ControllerInfo object"
+    )
+    assert hasattr(controller_info, "REVISION"), (
+        "Controller info should have a REVISION field"
+    )
+    assert hasattr(controller_info, "SERIES"), (
+        "Controller info should have a SERIES field"
+    )
     assert hasattr(controller_info, "ITEM"), "Controller info should have an ITEM field"
-    assert hasattr(controller_info, "FW_VERS"), "Controller info should have a FW_VERS field"
-    assert hasattr(controller_info, "FW_TIMESTAMP"), "Controller info should have a FW_TIMESTAMP field"
-    assert hasattr(controller_info, "FW_INFO"), "Controller info should have a FW_INFO field"
+    assert hasattr(controller_info, "FW_VERS"), (
+        "Controller info should have a FW_VERS field"
+    )
+    assert hasattr(controller_info, "FW_TIMESTAMP"), (
+        "Controller info should have a FW_TIMESTAMP field"
+    )
+    assert hasattr(controller_info, "FW_INFO"), (
+        "Controller info should have a FW_INFO field"
+    )
 
 
 def test_controller_connection(modbus_mock: MockModbusTcpClient) -> None:
@@ -41,8 +53,12 @@ def test_controller_connection(modbus_mock: MockModbusTcpClient) -> None:
     # Test connect
     hub.connect()
     assert hub.is_connected, "Hub should be connected after connect()"
-    assert hub.connection is not None, "Hub connection should not be None after connect()"
-    assert isinstance(hub.connection, ModbusConnection), "Hub connection should be a ModbusConnection"
+    assert hub.connection is not None, (
+        "Hub connection should not be None after connect()"
+    )
+    assert isinstance(hub.connection, ModbusConnection), (
+        "Hub connection should be a ModbusConnection"
+    )
 
     # Test close
     hub.close()
@@ -50,7 +66,9 @@ def test_controller_connection(modbus_mock: MockModbusTcpClient) -> None:
     # So we won't assert is_connected here as it depends on the mock implementation
 
 
-def test_controller_initialization(modbus_mock_with_modules: MockModbusTcpClient) -> None:
+def test_controller_initialization(
+    modbus_mock_with_modules: MockModbusTcpClient,
+) -> None:
     """Test controller initialization."""
     modbus_settings = HubConfig(host="dummy", port=502)
     hub = PLCHub(modbus_settings, initialize=False)
@@ -60,16 +78,24 @@ def test_controller_initialization(modbus_mock_with_modules: MockModbusTcpClient
     # Initialize without discovery
     hub.initialize(discovery=False)
     assert hub.is_initialized, "Hub should be initialized after initialize()"
-    assert not hub.is_module_discovery_done, "Module discovery should not be done when discovery=False"
+    assert not hub.is_module_discovery_done, (
+        "Module discovery should not be done when discovery=False"
+    )
 
     # Reset and initialize with discovery
     hub.is_initialized = False
     hub.initialize(discovery=True)
-    assert hub.is_initialized, "Hub should be initialized after initialize() with discovery"
-    assert hub.is_module_discovery_done, "Module discovery should be done when discovery=True"
+    assert hub.is_initialized, (
+        "Hub should be initialized after initialize() with discovery"
+    )
+    assert hub.is_module_discovery_done, (
+        "Module discovery should be done when discovery=True"
+    )
 
 
-def test_controller_run_discovery(modbus_mock_with_modules: MockModbusTcpClient) -> None:
+def test_controller_run_discovery(
+    modbus_mock_with_modules: MockModbusTcpClient,
+) -> None:
     """Test controller module discovery."""
     modbus_settings = HubConfig(host="dummy", port=502)
     hub = PLCHub(modbus_settings, initialize=False)
@@ -78,7 +104,9 @@ def test_controller_run_discovery(modbus_mock_with_modules: MockModbusTcpClient)
     # Run discovery
     result = hub.run_discovery()
     assert result, "Discovery should return True on success"
-    assert hub.is_module_discovery_done, "Module discovery should be done after run_discovery()"
+    assert hub.is_module_discovery_done, (
+        "Module discovery should be done after run_discovery()"
+    )
     assert len(hub.modules) > 0, "Modules should be discovered"
 
 
@@ -98,7 +126,9 @@ def test_controller_module_access(configured_hub: PLCHub) -> None:
     modules_count = 0
     for _module in configured_hub.modules:
         modules_count += 1
-    assert modules_count == len(configured_hub.modules), "Iteration should yield all modules"
+    assert modules_count == len(configured_hub.modules), (
+        "Iteration should yield all modules"
+    )
 
 
 def test_controller_config(modbus_mock: MockModbusTcpClient) -> None:
@@ -113,15 +143,18 @@ def test_controller_config(modbus_mock: MockModbusTcpClient) -> None:
 
     # Test with changed HubConfig
     hub_config = HubConfig(
-        host="new_server", port=5678,
-        modules=[ModuleConfig(name="test_module", type="test_type", index=0)]
+        host="new_server",
+        port=5678,
+        modules=[ModuleConfig(name="test_module", type="test_type", index=0)],
     )
     hub.config = hub_config
 
     assert hub.config.host == "new_server", "Server should be updated"
     assert hub.config.port == 5678, "Port should be updated"
     assert hub.config.modules == [], "Modules config should be empty"
-    assert hub._init_config == hub_config.modules, "Modules initial config should be updated"
+    assert hub._init_config == hub_config.modules, (
+        "Modules initial config should be updated"
+    )
 
 
 def test_controller_config_with_none(modbus_mock: MockModbusTcpClient) -> None:
@@ -129,21 +162,30 @@ def test_controller_config_with_none(modbus_mock: MockModbusTcpClient) -> None:
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
-        hub.config = None # type: ignore
+        hub.config = None  # type: ignore
     assert hub.config is not None, "Config should not be None"
 
-def test_controller_config_with_invalid_config(modbus_mock: MockModbusTcpClient) -> None:
+
+def test_controller_config_with_invalid_config(
+    modbus_mock: MockModbusTcpClient,
+) -> None:
     """Test controller configuration with invalid config."""
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
-        hub.config = "invalid_config" # type: ignore
+        hub.config = "invalid_config"  # type: ignore
+
 
 def test_controller_module_config(modbus_mock: MockModbusTcpClient) -> None:
     """Test controller module config."""
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
-    hub.config = HubConfig(host="dummy", port=502, modules=[ModuleConfig(name="test_module", type="test_type", index=0)])
+    hub.config = HubConfig(
+        host="dummy",
+        port=502,
+        modules=[ModuleConfig(name="test_module", type="test_type", index=0)],
+    )
     assert hub.config is not None, "Config should not be None"
+
 
 def test_controller_process_state_width(configured_hub: PLCHub) -> None:
     """Test controller process state width calculation."""
@@ -172,17 +214,21 @@ def test_controller_process_state_width(configured_hub: PLCHub) -> None:
         if not module.spec.io_type.digital and module.spec.io_type.output
     )
 
-    assert configured_hub._process_state_width['discrete'] == total_discrete, \
+    assert configured_hub._process_state_width["discrete"] == total_discrete, (
         f"Discrete width mismatch: {configured_hub._process_state_width['discrete']} != {total_discrete}"
+    )
 
-    assert configured_hub._process_state_width['coil'] == total_coil, \
+    assert configured_hub._process_state_width["coil"] == total_coil, (
         f"Coil width mismatch: {configured_hub._process_state_width['coil']} != {total_coil}"
+    )
 
-    assert configured_hub._process_state_width['input'] == total_input * 16, \
+    assert configured_hub._process_state_width["input"] == total_input * 16, (
         f"Input width mismatch: {configured_hub._process_state_width['input']} != {total_input} * 16"
+    )
 
-    assert configured_hub._process_state_width['holding'] == total_holding * 16, \
+    assert configured_hub._process_state_width["holding"] == total_holding * 16, (
         f"Holding width mismatch: {configured_hub._process_state_width['holding']} != {total_holding} * 16"
+    )
 
 
 def test_controller_setup_basic_test_modules(modbus_mock: MockModbusTcpClient) -> None:

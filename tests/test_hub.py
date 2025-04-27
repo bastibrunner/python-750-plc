@@ -4,11 +4,12 @@
 import logging
 from typing import Dict
 
-from pytest_subtests import SubTests
 import pytest
+from pytest_subtests import SubTests
 
-from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.module import WagoModule
+from wg750xxx.wg750xxx import PLCHub
+
 logger = logging.getLogger(__name__)
 
 # Using fixtures from conftest.py now
@@ -24,7 +25,9 @@ def test_module_digital_input_bits_match(configured_hub: PLCHub) -> None:
     # Directly set the process_state_width for testing purposes
     configured_hub._process_state_width["discrete"] = sum_bits_configured_modules
 
-    assert configured_hub._process_state_width["discrete"] == sum_bits_configured_modules, (
+    assert (
+        configured_hub._process_state_width["discrete"] == sum_bits_configured_modules
+    ), (
         f"Error: Digital input configuration mismatch: Created channels in state ({sum_bits_configured_modules}) "
         f"do not match with bits reported by hub ({configured_hub._process_state_width['discrete']})"
     )
@@ -59,7 +62,9 @@ def test_module_analog_input_bits_match(configured_hub: PLCHub) -> None:
     # Directly set the process_state_width for testing purposes
     configured_hub._process_state_width["input"] = sum_bits_configured_modules
 
-    assert configured_hub._process_state_width["input"] == sum_bits_configured_modules, (
+    assert (
+        configured_hub._process_state_width["input"] == sum_bits_configured_modules
+    ), (
         f"Error: Analog input configuration mismatch: Created channels in state ({sum_bits_configured_modules}) "
         f"do not match with bits reported by hub ({configured_hub._process_state_width['input']})"
     )
@@ -78,7 +83,9 @@ def test_module_analog_output_bits_match(configured_hub: PLCHub) -> None:
     # Directly set the process_state_width for testing purposes
     configured_hub._process_state_width["holding"] = sum_bits_configured_modules
 
-    assert configured_hub._process_state_width["holding"] == sum_bits_configured_modules, (
+    assert (
+        configured_hub._process_state_width["holding"] == sum_bits_configured_modules
+    ), (
         f"Error: Analog output configuration mismatch: Created channels in state ({sum_bits_configured_modules}) "
         f"do not match with bits reported by hub ({configured_hub._process_state_width['holding']})"
     )
@@ -93,17 +100,14 @@ def test_channel_count_match_all_modules(configured_hub: PLCHub) -> None:
             f"Error in Module {module.display_name}: Channel count mismatch: spec ({channels_spec}) != channels ({channels})"
         )
 
-def test_module_returns_correct_type_when_indexed(
-    configured_hub: PLCHub
-) -> None:
+
+def test_module_returns_correct_type_when_indexed(configured_hub: PLCHub) -> None:
     """Test the Dali module returns the correct type when indexed."""
     assert isinstance(configured_hub.modules[0], WagoModule), (
         "Module fetched by index should be a WagoModule"
     )
     modules_slice = configured_hub.modules[0:5]
-    assert isinstance(modules_slice, list), (
-        "Sliced modules should be a list"
-    )
+    assert isinstance(modules_slice, list), "Sliced modules should be a list"
     assert all(isinstance(module, WagoModule) for module in modules_slice), (
         "All items in module slice should be WagoModule instances"
     )
@@ -118,13 +122,17 @@ def test_module_returns_correct_type_when_indexed(
         "All items in modules fetched by ID should be WagoModule instances"
     )
 
-def test_all_configured_modules_present(subtests: SubTests, configured_hub: PLCHub, modules: Dict[int, int]) -> None:
+
+def test_all_configured_modules_present(
+    subtests: SubTests, configured_hub: PLCHub, modules: Dict[int, int]
+) -> None:
     """Test if all configured modules are present."""
     for module_id in modules:
         with subtests.test(f"Module {module_id} is present"):
             assert module_id in [
                 module.module_identifier for module in configured_hub.modules
             ], f"Module {module_id} is missing from the hub"
+
 
 @pytest.mark.parametrize(
     "module_idx,modbus_channel_type,start_address",
@@ -144,11 +152,14 @@ def test_all_configured_modules_present(subtests: SubTests, configured_hub: PLCH
     ],
 )
 def test_module_addresses(
-    configured_hub: PLCHub, module_idx: int, modbus_channel_type: str, start_address: int
+    configured_hub: PLCHub,
+    module_idx: int,
+    modbus_channel_type: str,
+    start_address: int,
 ) -> None:
     """Test module addresses."""
     for index, channel in enumerate(
-        configured_hub.modules[module_idx].modbus_channels[modbus_channel_type] # type: ignore
+        configured_hub.modules[module_idx].modbus_channels[modbus_channel_type]  # type: ignore
     ):
         assert channel.address == start_address + index, (
             f"Error: expected address {start_address + index}, got {channel.address}"

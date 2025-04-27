@@ -1,0 +1,5 @@
+numpy~=2.2.5
+pymodbus~=3.8.3
+pytest~=8.3.5
+pytest_socket~=0.7.0
+pytest_subtests~=0.14.1

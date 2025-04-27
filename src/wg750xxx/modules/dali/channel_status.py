@@ -4,6 +4,7 @@
 
 from .channel_base import DaliChannelBase
 
+
 class DaliChannelStatus(DaliChannelBase):
     """DALI commands."""
 

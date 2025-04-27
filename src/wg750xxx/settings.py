@@ -1,7 +1,10 @@
 """Settings for the Wago 750."""
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field
+
 from .const import DEFAULT_SCAN_INTERVAL
+
+
 class ChannelConfig(BaseModel):
     """Channel Settings."""
 
@@ -25,15 +28,17 @@ class ChannelConfig(BaseModel):
     index: int | None = Field(description="The index of the channel", default=None)
     module_id: str | None = Field(description="The id of the module", default=None)
     update_interval: int | None = Field(
-        description="The update interval of the module in milliseconds", default=DEFAULT_SCAN_INTERVAL
+        description="The update interval of the module in milliseconds",
+        default=DEFAULT_SCAN_INTERVAL,
     )
 
-    @computed_field
     @property
     def id(self) -> str:
         """Generate a unique id for the channel."""
 
-        return f"{self.module_id}_{self.index}_{str(self.type).replace(' ', '_').lower()}"
+        return (
+            f"{self.module_id}_{self.index}_{str(self.type).replace(' ', '_').lower()}"
+        )
 
 
 class ModuleConfig(BaseModel):
@@ -45,13 +50,13 @@ class ModuleConfig(BaseModel):
         description="The index/position of the module", default=None
     )
     update_interval: int = Field(
-        description="The update interval of the module in milliseconds", default=DEFAULT_SCAN_INTERVAL
+        description="The update interval of the module in milliseconds",
+        default=DEFAULT_SCAN_INTERVAL,
     )
     channels: list[ChannelConfig] | None = Field(
         description="The channels of the module", default=None
     )
 
-    @computed_field
     @property
     def id(self) -> str:
         """Generate a unique id for the module."""
@@ -66,8 +71,14 @@ class HubConfig(BaseModel):
         description="The hostname or IP address of the Wago Modbus TCP server"
     )
     port: int = Field(description="The port of the Wago Modbus TCP server", default=502)
-    modules: list[ModuleConfig] = Field(description="The modules of the hub", default=[])
-    update_interval: int = Field(description="The global update interval of the hub in milliseconds", default=DEFAULT_SCAN_INTERVAL)
+    modules: list[ModuleConfig] = Field(
+        description="The modules of the hub", default=[]
+    )
+    update_interval: int = Field(
+        description="The global update interval of the hub in milliseconds",
+        default=DEFAULT_SCAN_INTERVAL,
+    )
+
 
 class ModbusSettings(BaseModel):
     """Settings for the Modbus server."""

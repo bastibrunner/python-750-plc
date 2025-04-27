@@ -5,10 +5,8 @@ import logging
 from random import randint
 import re
 
-import pytest
-
-from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.digital.modules import Wg750DigitalIn, Wg750DigitalOut
+from wg750xxx.wg750xxx import PLCHub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 
@@ -24,39 +22,49 @@ DigitalOutputModule = Wg750DigitalOut
 def test_digital_input_modules_created(configured_hub: PLCHub) -> None:
     """Test that digital input modules are created correctly."""
     digital_input_modules = [
-        module for module in configured_hub.modules
+        module
+        for module in configured_hub.modules
         if module.spec.io_type.digital and module.spec.io_type.input
     ]
 
     assert len(digital_input_modules) > 0, "No digital input modules found"
 
     for module in digital_input_modules:
-        assert isinstance(module, DigitalInputModule), \
+        assert isinstance(module, DigitalInputModule), (
             f"Module {module.display_name} should be a DigitalInputModule"
-        assert len(module.channels or []) > 0, f"Module {module.display_name} has no channels"
+        )
+        assert len(module.channels or []) > 0, (
+            f"Module {module.display_name} has no channels"
+        )
 
         for channel in module.channels:
-            assert channel.channel_type == "Digital In", \
+            assert channel.channel_type == "Digital In", (
                 f"Channel {channel} has incorrect type {channel.channel_type}"
+            )
 
 
 def test_digital_output_modules_created(configured_hub: PLCHub) -> None:
     """Test that digital output modules are created correctly."""
     digital_output_modules = [
-        module for module in configured_hub.modules
+        module
+        for module in configured_hub.modules
         if module.spec.io_type.digital and module.spec.io_type.output
     ]
 
     assert len(digital_output_modules) > 0, "No digital output modules found"
 
     for module in digital_output_modules:
-        assert isinstance(module, DigitalOutputModule), \
+        assert isinstance(module, DigitalOutputModule), (
             f"Module {module.display_name} should be a DigitalOutputModule"
-        assert len(module.channels or []) > 0, f"Module {module.display_name} has no channels"
+        )
+        assert len(module.channels or []) > 0, (
+            f"Module {module.display_name} has no channels"
+        )
 
         for channel in module.channels:
-            assert channel.channel_type == "Digital Out", \
+            assert channel.channel_type == "Digital Out", (
                 f"Channel {channel} has incorrect type {channel.channel_type}"
+            )
 
 
 def test_digital_input_channel_read(
@@ -74,7 +82,9 @@ def test_digital_input_channel_read(
 
             for channel in module.channels:
                 value = channel.read()
-                assert isinstance(value, bool), f"Channel {channel} read should return a boolean value"
+                assert isinstance(value, bool), (
+                    f"Channel {channel} read should return a boolean value"
+                )
 
                 if hasattr(channel, "modbus_channel") and channel.modbus_channel:
                     address = channel.modbus_channel.address
@@ -125,7 +135,9 @@ def test_digital_channel_callbacks(
                 test_channel = module.channels[0]
                 break
 
-    assert test_channel is not None, "No digital input channel found for testing callbacks"
+    assert test_channel is not None, (
+        "No digital input channel found for testing callbacks"
+    )
 
     # Register callback
     test_channel.on_change_callback = test_callback
@@ -166,7 +178,9 @@ def test_digital_channel_config(configured_hub: PLCHub) -> None:
             original_name = channel.name
             channel.name = None
             expected_name = re.compile(r"^.*\s\d+$")
-            error_msg = f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
+            error_msg = (
+                f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
+            )
             assert expected_name.match(channel.auto_generated_name()), error_msg
 
             # Restore name
@@ -180,7 +194,9 @@ def test_module_channel_count(configured_hub: PLCHub) -> None:
             continue
 
         # Digital modules should have channels matching their module spec
-        assert module.channels is not None, f"Module {module.display_name} has no channels"
+        assert module.channels is not None, (
+            f"Module {module.display_name} has no channels"
+        )
         channel_count = len(module.channels)
         expected_count = 0
 

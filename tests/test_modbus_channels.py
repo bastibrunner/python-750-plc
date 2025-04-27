@@ -1,10 +1,11 @@
 # pylint: disable=missing-function-docstring,missing-module-docstring,missing-class-docstring
 
-from unittest.mock import Mock, patch
-from wg750xxx.modules.modbus import (
-    ModbusConnection
-)
+from unittest.mock import patch
+
 import pytest
+
+from wg750xxx.modbus.state import ModbusConnection
+
 
 @pytest.fixture
 def mock_modbus_client():

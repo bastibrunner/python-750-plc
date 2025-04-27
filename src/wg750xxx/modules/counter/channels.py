@@ -2,9 +2,9 @@
 
 from typing import Any
 
+from ..channel import WagoChannel
 from .counter_communication import CounterCommunicationRegister
 
-from ..channel import WagoChannel
 
 class Counter32Bit(WagoChannel):
     """Counter 32Bit."""
@@ -15,19 +15,25 @@ class Counter32Bit(WagoChannel):
     icon: str = "mdi:counter"
     value_template: str = "{{ value | int }}"
 
-    def __init__(self, communication_register: CounterCommunicationRegister, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        communication_register: CounterCommunicationRegister,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Initialize the Counter32Bit channel."""
-        self.communication_register: CounterCommunicationRegister = communication_register
+        self.communication_register: CounterCommunicationRegister = (
+            communication_register
+        )
         super().__init__("Counter 32Bit", *args, **kwargs)
 
-    def read(self) -> None:
+    def read(self) -> int:
         """Read the counter value."""
         return self.communication_register.value
 
     def write(self, value: int) -> None:
         """Write the counter value."""
         self.communication_register.value = value
-
 
     def reset(self) -> None:
         """Reset the counter."""

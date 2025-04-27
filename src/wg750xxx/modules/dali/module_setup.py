@@ -3,12 +3,10 @@
 # pylint: disable=unused-variable,too-many-public-methods
 import logging
 
-from .dali_communication import (
-    DaliOutputMessage,
-    DaliInputMessage,
-)
+from .dali_communication import DaliInputMessage, DaliOutputMessage
 from .misc import dali_response_to_channel_list
 from .module_base import ModuleBase
+
 log = logging.getLogger(__name__)
 
 
@@ -27,7 +25,7 @@ class ModuleSetup(ModuleBase):
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x06), response=True
                 ),
-                offset=0
+                offset=0,
             )
         )
         channels.extend(
@@ -35,7 +33,7 @@ class ModuleSetup(ModuleBase):
                 self.dali_communication_register.write(
                     DaliOutputMessage(command_extension=0x07), response=True
                 ),
-                offset=32
+                offset=32,
             )
         )
         return channels

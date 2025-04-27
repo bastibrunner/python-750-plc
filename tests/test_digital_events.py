@@ -2,16 +2,14 @@
 
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
-from typing import Any, Callable
-import time
 
-from wg750xxx.wg750xxx import PLCHub
-from wg750xxx.settings import ChannelConfig
-from wg750xxx.modules.digital.channels import DigitalIn, EventButton, DigitalEvent
 from wg750xxx.modbus.state import Discrete, ModbusConnection
-
+from wg750xxx.modules.digital.channels import DigitalEvent, DigitalIn, EventButton
+from wg750xxx.settings import ChannelConfig
+from wg750xxx.wg750xxx import PLCHub
 
 
 @pytest.fixture
@@ -26,7 +24,9 @@ def mock_modbus_connection():
 def event_button(mock_modbus_connection):
     """Create an EventButton instance for testing."""
     discrete = Discrete(0, mock_modbus_connection)
-    config = ChannelConfig(name="Test Button", type="Digital In", device_class="event_button")
+    config = ChannelConfig(
+        name="Test Button", type="Digital In", device_class="event_button"
+    )
     return EventButton(discrete, config)
 
 
@@ -34,35 +34,38 @@ def test_channel_is_event_button_when_device_class_set(configured_hub: PLCHub) -
     """Test that channels are created as EventButton when device_class is set appropriately."""
     # Find a digital input module to modify
     digital_input_modules = [
-        module for module in configured_hub.modules
+        module
+        for module in configured_hub.modules
         if module.spec.io_type.digital and module.spec.io_type.input
     ]
 
     assert len(digital_input_modules) > 0, "No digital input modules found for testing"
 
     test_module = digital_input_modules[0]
-    original_channel = test_module.channels[0] # type: ignore
+    original_channel = test_module.channels[0]  # type: ignore
 
     # Create a new channel with device_class set to event_button
     discrete = original_channel.modbus_channel
     event_config = ChannelConfig(
-        name="Event Button Test",
-        type="Digital In",
-        device_class="event_button"
+        name="Event Button Test", type="Digital In", device_class="event_button"
     )
 
     # Create the event button directly
     event_button = EventButton(discrete, event_config)
 
     # Verify the new channel is an EventButton
-    assert isinstance(event_button, EventButton), "Channel was not converted to an EventButton"
+    assert isinstance(event_button, EventButton), (
+        "Channel was not converted to an EventButton"
+    )
     assert event_button.device_class == "event_button"
 
 
 def test_get_instance_returns_event_button(mock_modbus_connection):
     """Test that get_instance returns an EventButton when device_class is set to event_button."""
     discrete = Discrete(0, mock_modbus_connection)
-    config = ChannelConfig(name="Test Button", type="Digital In", device_class="event_button")
+    config = ChannelConfig(
+        name="Test Button", type="Digital In", device_class="event_button"
+    )
     digital_in = DigitalIn(discrete, config)
 
     instance = digital_in.get_instance()
@@ -74,7 +77,9 @@ def test_get_instance_returns_event_button(mock_modbus_connection):
 def test_normal_get_instance(mock_modbus_connection):
     """Test that get_instance returns a regular DigitalIn when device_class is not event_button."""
     discrete = Discrete(0, mock_modbus_connection)
-    config = ChannelConfig(name="Test Input", type="Digital In", device_class="binary_sensor")
+    config = ChannelConfig(
+        name="Test Input", type="Digital In", device_class="binary_sensor"
+    )
     digital_in = DigitalIn(discrete, config)
 
     instance = digital_in.get_instance()
@@ -87,6 +92,7 @@ def test_normal_get_instance(mock_modbus_connection):
 async def test_short_press_event(event_button):
     """Test that a short press generates the correct event."""
     callback_mock = MagicMock()
+
     def callback(value):
         callback_mock(value)
 
@@ -115,6 +121,7 @@ async def test_short_press_event(event_button):
 async def test_double_tap_event(event_button):
     """Test that a double tap generates the correct event."""
     callback_mock = MagicMock()
+
     def callback(value):
         callback_mock(value)
 
@@ -147,6 +154,7 @@ async def test_double_tap_event(event_button):
 async def test_long_press_event(event_button):
     """Test that a long press generates the correct event."""
     callback_mock = MagicMock()
+
     def callback(value):
         callback_mock(value)
 
@@ -175,6 +183,7 @@ async def test_long_press_event(event_button):
 async def test_hold_events(event_button):
     """Test that a hold generates the correct events."""
     callback_mock = MagicMock()
+
     def callback(value):
         callback_mock(value)
 
@@ -210,6 +219,7 @@ async def test_hold_events(event_button):
 async def test_debounce(event_button):
     """Test that rapid changes are properly debounced."""
     callback_mock = MagicMock()
+
     def callback(value):
         callback_mock(value)
 
@@ -250,7 +260,11 @@ async def test_debounce(event_button):
 async def test_cancel_pending_tasks(event_button):
     """Test that pending tasks are properly cancelled when state changes."""
     # Create a spy on the _cancel_all_pending_tasks method
-    with patch.object(event_button, '_cancel_all_pending_tasks', wraps=event_button._cancel_all_pending_tasks) as cancel_spy:
+    with patch.object(
+        event_button,
+        "_cancel_all_pending_tasks",
+        wraps=event_button._cancel_all_pending_tasks,
+    ) as cancel_spy:
         # Simulate button press
         event_button._handle_raw_state_change(True)
 

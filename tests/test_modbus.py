@@ -13,7 +13,9 @@ from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 logger = logging.getLogger(__name__)
 
 
-def test_modbus_discrete_input_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_discrete_input_channel_read(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the read method of the Discrete input channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -27,9 +29,9 @@ def test_modbus_discrete_input_channel_read(modbus_mock_with_modules: MockModbus
             for channel in module.modbus_channels["discrete"]:
                 channel_value = channel.read()
                 mock_value = bool(
-                    modbus_mock_with_modules.read_discrete_inputs(
-                        channel.address
-                    ).bits[0]
+                    modbus_mock_with_modules.read_discrete_inputs(channel.address).bits[
+                        0
+                    ]
                 )
                 assert channel_value == mock_value, (
                     f"Error: Discrete input channel #{channel.address} read mismatch: Channel Value ({channel_value}) != Mock Value ({mock_value})"
@@ -38,7 +40,9 @@ def test_modbus_discrete_input_channel_read(modbus_mock_with_modules: MockModbus
         assert address > 0, "Error: No Discrete input channels found"
 
 
-def test_modbus_coil_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_coil_channel_read(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the read method of the Coil channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -51,9 +55,9 @@ def test_modbus_coil_channel_read(modbus_mock_with_modules: MockModbusTcpClient,
                 continue
             for channel in module.modbus_channels["coil"]:
                 channel_value = channel.read()
-                mock_value = modbus_mock_with_modules.read_coils(
-                    channel.address
-                ).bits[0]
+                mock_value = modbus_mock_with_modules.read_coils(channel.address).bits[
+                    0
+                ]
                 assert channel_value == mock_value, (
                     f"Error: Coil channel #{channel.address} read mismatch: Channel Value ({channel_value}) != Mock Value ({mock_value})"
                 )
@@ -61,7 +65,9 @@ def test_modbus_coil_channel_read(modbus_mock_with_modules: MockModbusTcpClient,
         assert address > 0, "Error: No Coil channels found"
 
 
-def test_modbus_input_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_input_channel_read(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the read method of the Input channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -84,7 +90,9 @@ def test_modbus_input_channel_read(modbus_mock_with_modules: MockModbusTcpClient
         assert address > 0, "Error: No Input channels found"
 
 
-def test_modbus_holding_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_holding_channel_read(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the read method of the Holding channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -107,7 +115,9 @@ def test_modbus_holding_channel_read(modbus_mock_with_modules: MockModbusTcpClie
         assert address > 0, "Error: No Holding channels found"
 
 
-def test_modbus_coil_channel_write(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_coil_channel_write(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the write method of the Coil channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -121,9 +131,9 @@ def test_modbus_coil_channel_write(modbus_mock_with_modules: MockModbusTcpClient
             for channel in module.modbus_channels["coil"]:
                 value = bool(randint(0, 1))
                 channel.write(value)
-                mock_value = modbus_mock_with_modules.read_coils(
-                    channel.address
-                ).bits[0]
+                mock_value = modbus_mock_with_modules.read_coils(channel.address).bits[
+                    0
+                ]
                 assert value == mock_value, (
                     f"Error: Coil channel #{channel.address} write mismatch: Channel Value ({value}) != Mock Value ({mock_value})"
                 )
@@ -131,7 +141,9 @@ def test_modbus_coil_channel_write(modbus_mock_with_modules: MockModbusTcpClient
         assert address > 0, "Error: No Coil channels found"
 
 
-def test_modbus_holding_channel_write(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_holding_channel_write(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the write method of the Holding channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -155,7 +167,9 @@ def test_modbus_holding_channel_write(modbus_mock_with_modules: MockModbusTcpCli
         assert address > 0, "Error: No Holding channels found"
 
 
-def test_modbus_input_channel_read_lsb(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_input_channel_read_lsb(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the read_lsb method of the Input channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -181,7 +195,9 @@ def test_modbus_input_channel_read_lsb(modbus_mock_with_modules: MockModbusTcpCl
         assert address > 0, "Error: No Input channels found"
 
 
-def test_modbus_input_channel_read_msb(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_input_channel_read_msb(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the read_msb method of the Input channel."""
     for _ in range(50):
         modbus_mock_with_modules.randomize_state()
@@ -207,7 +223,9 @@ def test_modbus_input_channel_read_msb(modbus_mock_with_modules: MockModbusTcpCl
         assert address > 0, "Error: No Input channels found"
 
 
-def test_modbus_holding_channel_write_lsb(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_holding_channel_write_lsb(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the write_lsb method of the Holding channel."""
     for _ in range(50):
         # modbus_mock_with_modules.randomize_state()
@@ -234,7 +252,9 @@ def test_modbus_holding_channel_write_lsb(modbus_mock_with_modules: MockModbusTc
         assert address > 0, "Error: No Holding channels found"
 
 
-def test_modbus_holding_channel_write_msb(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_modbus_holding_channel_write_msb(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test the write_msb method of the Holding channel."""
     for _ in range(50):
         # modbus_mock_with_modules.randomize_state()

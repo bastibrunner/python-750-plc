@@ -7,8 +7,8 @@ import re
 
 import pytest
 
-from wg750xxx.wg750xxx import PLCHub
 from wg750xxx.modules.counter.modules import Wg750Counter
+from wg750xxx.wg750xxx import PLCHub
 
 from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 
@@ -30,16 +30,22 @@ def test_counter_modules_created(configured_hub: PLCHub) -> None:
 
     # If no counter modules found by alias, this test will be skipped
     for module in counter_modules:
-        assert any(isinstance(module, cls) for cls in CounterModuleTypes), \
+        assert any(isinstance(module, cls) for cls in CounterModuleTypes), (
             f"Module {module.display_name} should be a Counter Module"
-        assert module.channels is not None, f"Module {module.display_name} has no channels"
+        )
+        assert module.channels is not None, (
+            f"Module {module.display_name} has no channels"
+        )
         assert len(module.channels) > 0, f"Module {module.display_name} has no channels"
         for channel in module.channels:
-            assert channel.channel_type in ["Counter 16Bit", "Counter 32Bit"], \
+            assert channel.channel_type in ["Counter 16Bit", "Counter 32Bit"], (
                 f"Channel {channel} has incorrect type {channel.channel_type}"
+            )
 
 
-def test_counter_channel_read(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_counter_channel_read(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test reading from counter channels."""
     # Find counter modules
     counter_modules = []
@@ -65,8 +71,12 @@ def test_counter_channel_read(modbus_mock_with_modules: MockModbusTcpClient, con
                 # would need to be customized based on the specific implementation
 
 
-@pytest.mark.skip(reason="Skipping counter reset test, it's not implemented in modbus_mock")
-def test_counter_channel_reset(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+@pytest.mark.skip(
+    reason="Skipping counter reset test, it's not implemented in modbus_mock"
+)
+def test_counter_channel_reset(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test counter reset functionality if available."""
     # Find counter modules
     counter_modules = []
@@ -83,14 +93,20 @@ def test_counter_channel_reset(modbus_mock_with_modules: MockModbusTcpClient, co
             if hasattr(channel, "reset") and callable(channel.reset):
                 # Before reset, read the current value
                 before_value = channel.read()
-
+                assert before_value is not None, (
+                    f"Channel {channel} has no value before reset"
+                )
+                assert before_value != 0, (
+                    f"Channel {channel} value before reset is not an integer"
+                )
                 # Call reset
                 channel.reset()
 
                 # After reset, the value should be 0 (or whatever the reset value is)
                 after_value = channel.read()
-                assert after_value == 0, \
+                assert after_value == 0, (
                     f"Channel {channel} value after reset should be 0, got {after_value}"
+                )
 
 
 def test_counter_channel_callbacks(
@@ -131,7 +147,9 @@ def test_counter_channel_callbacks(
     test_channel.notify_value_change(test_value)
 
     assert callback_called, "Callback was not called"
-    error_msg = f"Callback received wrong value: {callback_value} instead of {test_value}"
+    error_msg = (
+        f"Callback received wrong value: {callback_value} instead of {test_value}"
+    )
     assert callback_value == test_value, error_msg
 
     # Clean up
@@ -158,10 +176,14 @@ def test_counter_channel_config(configured_hub: PLCHub) -> None:
 
             # Test auto-generated name
             expected_name = re.compile(r"Counter \d+Bit \d+")
-            assert expected_name.match(channel.auto_generated_name()), f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
+            assert expected_name.match(channel.auto_generated_name()), (
+                f"Auto-generated name is incorrect: {channel.auto_generated_name()}"
+            )
 
 
-def test_32bit_counter_values(modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub) -> None:
+def test_32bit_counter_values(
+    modbus_mock_with_modules: MockModbusTcpClient, configured_hub: PLCHub
+) -> None:
     """Test 32-bit counter values if available."""
     # Find counter modules
     counter_modules = []
@@ -182,5 +204,7 @@ def test_32bit_counter_values(modbus_mock_with_modules: MockModbusTcpClient, con
 
                     # Read current value
                     initial_value = channel.read()
-                    error_msg = f"Counter value should be an integer, got {type(initial_value)}"
+                    error_msg = (
+                        f"Counter value should be an integer, got {type(initial_value)}"
+                    )
                     assert isinstance(initial_value, int), error_msg

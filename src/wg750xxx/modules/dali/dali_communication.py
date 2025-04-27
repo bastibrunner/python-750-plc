@@ -6,6 +6,7 @@ import time
 
 from wg750xxx.modbus.registers import Words
 from wg750xxx.modbus.state import AddressDict, ModbusConnection
+
 from .control_byte import ControlByte
 from .exceptions import DaliError
 from .status_byte import StatusByte
@@ -227,7 +228,9 @@ class DaliCommunicationRegister:
         self.read_status_byte()
         self.read_control_byte()
 
-        if self.read_request():  # TODO: This is a hack to find out why the DALI master is requesting a read.
+        if (
+            self.read_request()
+        ):  # TODO: This is a hack to find out why the DALI master is requesting a read.
             data = self.read()
             log.warning(
                 "DALI master is requesting an unexpected read before write: %s", data
@@ -242,7 +245,9 @@ class DaliCommunicationRegister:
         self.wait_for_transmit_accept(timeout)
         if response:
             return self.read(wait=False)
-        if self.read_request():  # TODO: This is a hack to find out why the DALI master is requesting a read.
+        if (
+            self.read_request()
+        ):  # TODO: This is a hack to find out why the DALI master is requesting a read.
             data = self.read()
             log.warning(
                 "DALI master is requesting an unexpected read after writing %s \n Data in register: %s",

@@ -1,23 +1,20 @@
 """Dali module."""
 
-from collections.abc import Iterator, Callable
-import time
-from typing import ClassVar, cast, Any
+from collections.abc import Callable, Iterator
+from logging import getLogger
+from typing import Any, ClassVar, cast
 
-from homeassistant.core import logging
-
-from ..module import WagoModule
 from ..exceptions import WagoModuleError
+from ..module import WagoModule
 from ..spec import IOType, ModbusChannelSpec, ModuleSpec
 from .channels import DaliChannel
-from .module_setup import ModuleSetup
-from .module_status import ModuleStatus
-from .module_commands import ModuleCommands
 from .dali_communication import DaliCommunicationRegister
 from .exceptions import DaliError
+from .module_commands import ModuleCommands
+from .module_setup import ModuleSetup
+from .module_status import ModuleStatus
 
-_LOGGER = logging.getLogger(__name__)
-
+_LOGGER = getLogger(__name__)
 
 class Wg750DaliMaster(WagoModule):
     """750-641 1-Kanal DALI Master."""
@@ -64,7 +61,10 @@ class Wg750DaliMaster(WagoModule):
         """Get a DALI channel by index."""
         if self.channels is None:
             return None
-        return self.channels[key]
+        channel = self.channels[key]
+        if isinstance(channel, DaliChannel):
+            return channel
+        return None
 
     def __len__(self) -> int:
         """Get the number of DALI channels."""
@@ -104,18 +104,20 @@ class Wg750DaliMaster(WagoModule):
         return self._on_change_callback
 
     @on_change_callback.setter
-    def on_change_callback(self, callback: Callable[[Any, Any | None], None] | None) -> None:
+    def on_change_callback(
+        self, callback: Callable[[Any, Any | None], None] | None
+    ) -> None:
         """Set the callback function that gets called when the channel value changes."""
         self._on_change_callback = callback
 
         # If we have a modbus channel and a valid callback, register with ModbusConnection
         if len(self.modbus_channels["input"]) > 0 and callback is not None:
-            if hasattr(self.modbus_connection, 'register_channel_callback'):
+            if hasattr(self.modbus_connection, "register_channel_callback"):
                 for channel in self.modbus_channels["input"]:
                     self.modbus_connection.register_channel_callback(channel, self)
         elif len(self.modbus_channels["input"]) > 0 and callback is None:
             # Unregister if callback is set to None
-            if hasattr(self.modbus_connection, 'unregister_channel_callback'):
+            if hasattr(self.modbus_connection, "unregister_channel_callback"):
                 for channel in self.modbus_channels["input"]:
                     self.modbus_connection.unregister_channel_callback(channel, self)
 
@@ -124,18 +126,26 @@ class Wg750DaliMaster(WagoModule):
         self.dali_communication_register.read_status_byte()
         self.dali_communication_register.read_control_byte()
 
-        if self.dali_communication_register.read_request():  # TODO: This is to find out why the DALI master is requesting a read.
+        if (
+            self.dali_communication_register.read_request()
+        ):  # TODO: This is to find out why the DALI master is requesting a read.
             data = self.dali_communication_register.read()
             _LOGGER.warning(
                 "DALI master is requesting an unexpected read before write: %s", data
             )
             raise DaliError("DALI master is requesting an unexpected read.")
 
-        if self._on_change_callback is None:
+        if not hasattr(self, "_on_change_callback") or self._on_change_callback is None:
             return
-        if self._on_change_callback.__code__.co_argcount == 1:
+
+        code = getattr(self._on_change_callback, "__code__", None)
+        if code is None or not hasattr(code, "co_argcount"):
+            self._on_change_callback(new_value, self)
+        elif code.co_argcount == 1:
             self._on_change_callback(new_value)
-        elif self._on_change_callback.__code__.co_argcount == 2:
+        elif code.co_argcount == 2:
             self._on_change_callback(new_value, self)
         else:
-            raise ValueError(f"Callback function {self._on_change_callback.__name__} has {self._on_change_callback.__code__.co_argcount} arguments, expected 1 or 2")
+            raise ValueError(
+                f"Callback function has {code.co_argcount} arguments, expected 1 or 2"
+            )

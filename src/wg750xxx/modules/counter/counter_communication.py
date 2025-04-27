@@ -1,11 +1,10 @@
 """Counter communication."""
-from ...modbus.state import (
-    AddressDict,
-    ModbusConnection,
-)
-from ...modbus.registers import Words, Register
 
-class CounterControlByte():
+from ...modbus.registers import Register, Words
+from ...modbus.state import AddressDict, ModbusConnection
+
+
+class CounterControlByte:
     """Counter control byte."""
 
     def __init__(self, register: Register, modbus_connection: ModbusConnection) -> None:
@@ -58,7 +57,8 @@ class CounterControlByte():
         """Set the DO1 in output register."""
         self._set_and_write(2, value)
 
-class CounterStatusByte():
+
+class CounterStatusByte:
     """Counter status byte."""
 
     def __init__(self, register: Register, modbus_connection: ModbusConnection) -> None:
@@ -68,8 +68,10 @@ class CounterStatusByte():
 
     def _read(self, bit_index: int) -> bool:
         """Read the bit from the register."""
-        self.modbus_connection.read_input_registers(self.register.address, 1)
-        return self.register.bits()[bit_index]
+        value = self.modbus_connection.read_input_registers(self.register.address, 1)
+        if hasattr(value, "bits"):
+            return bool(value.bits()[bit_index])
+        return False
 
     @property
     def ack_set_counter(self) -> bool:
@@ -101,21 +103,42 @@ class CounterStatusByte():
         """Check if the counter is set."""
         return self._read(0)
 
-class CounterCommunicationRegister():
+
+class CounterCommunicationRegister:
     """Counter communication register."""
 
-    def __init__(self, modbus_connection: ModbusConnection, modbus_address: AddressDict):
+    def __init__(
+        self, modbus_connection: ModbusConnection, modbus_address: AddressDict
+    ):
         """Initialize the CounterCommunicationRegister."""
         self.modbus_connection = modbus_connection
         self.modbus_address = modbus_address
+
+        # Read the input registers
+        input_registers = self.modbus_connection.read_input_registers(
+            self.modbus_address["input"], 3, update=True
+        )
         self.input_register = Register(
-            self.modbus_address["input"],
-            self.modbus_connection.state["input"][self.modbus_address["input"]:self.modbus_address["input"]+3])
+            self.modbus_address["input"], input_registers.value
+        )
+
+        # Read the output registers
+        holding_registers = self.modbus_connection.read_holding_registers(
+            self.modbus_address["holding"], 3, update=True
+        )
         self.output_register = Register(
-            self.modbus_address["holding"],
-            self.modbus_connection.state["holding"][self.modbus_address["holding"]:self.modbus_address["holding"]+3])
-        self.control_byte = CounterControlByte(Register(self.modbus_address["holding"],self.output_register[0]),modbus_connection)
-        self.status_byte = CounterStatusByte(Register(self.modbus_address["input"],self.input_register[0]),modbus_connection)
+            self.modbus_address["holding"], holding_registers.value
+        )
+
+        # Create control and status bytes
+        self.control_byte = CounterControlByte(
+            Register(self.modbus_address["holding"], [self.output_register.value[0]]),
+            modbus_connection,
+        )
+        self.status_byte = CounterStatusByte(
+            Register(self.modbus_address["input"], [self.input_register.value[0]]),
+            modbus_connection,
+        )
 
     @property
     def value(self) -> int:
@@ -125,7 +148,13 @@ class CounterCommunicationRegister():
     @value.setter
     def value(self, value: int) -> None:
         """Set the value of the counter."""
-        self.input_register[1:3] = Words(value.to_bytes())
+        # Convert value to bytes and create Words object
+        value_bytes = value.to_bytes(4, byteorder="little")
+        word_values = [
+            int.from_bytes(value_bytes[0:2], byteorder="little"),
+            int.from_bytes(value_bytes[2:4], byteorder="little"),
+        ]
+        self.input_register[1:3] = Words(word_values)
         self.control_byte.set_counter = True
         # TODO: we should async wait for the counter to be reset
         if self.status_byte.ack_set_counter:
@@ -134,7 +163,6 @@ class CounterCommunicationRegister():
     def reset(self) -> None:
         """Reset the counter."""
         self.value = 0
-
 
     def lock(self) -> None:
         """Lock the counter."""

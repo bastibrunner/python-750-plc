@@ -3,11 +3,9 @@
 # pylint: disable=unused-variable,too-many-public-methods
 from typing import Any
 
-from .dali_communication import (
-    DaliCommunicationRegister,
-    DaliOutputMessage,
-)
 from ..exceptions import WagoModuleError
+from .dali_communication import DaliCommunicationRegister, DaliOutputMessage
+
 
 class DaliChannelBase:
     """DALI commands."""

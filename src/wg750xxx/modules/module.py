@@ -4,17 +4,17 @@ from abc import abstractmethod
 import logging
 from typing import ClassVar, Self
 
-from .channel import WagoChannel
-from .exceptions import WagoModuleError
-from .identifier import ModuleIdentifier
+from ..const import DEFAULT_SCAN_INTERVAL
 from ..modbus.state import (
     AddressDict,
     ModbusChannel,
     ModbusChannelType,
     ModbusConnection,
 )
-from ..const import DEFAULT_SCAN_INTERVAL
-from ..settings import ModuleConfig, ChannelConfig
+from ..settings import ChannelConfig, ModuleConfig
+from .channel import WagoChannel
+from .exceptions import WagoModuleError
+from .identifier import ModuleIdentifier
 from .spec import ModuleSpec
 
 log = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ class WagoModule:
             modbus_address: AddressDict: The modbus address of the module.
             config: ModuleConfig | None: The configuration of the module.
             update_interval: int | None: The update interval of the module.
+
         Returns:
             WagoModule: The created WagoModule.
 
@@ -225,13 +226,15 @@ class WagoModule:
     @property
     def config(self) -> ModuleConfig:
         """Get the configuration of the module."""
-        if not hasattr(self, '_config') or self._config is None:
+        if not hasattr(self, "_config") or self._config is None:
             self._config = ModuleConfig(
                 index=self.index,
                 type=self.spec.module_type,
                 name=self.display_name or self.spec.module_type,
                 update_interval=self.update_interval,
-                channels=[channel.config for channel in self.channels] if self.channels is not None else None
+                channels=[channel.config for channel in self.channels]
+                if self.channels is not None
+                else None,
             )
         else:
             self._config.index = self.index
@@ -265,6 +268,8 @@ class WagoModule:
     @property
     def name(self) -> str:
         """Get the display name of the module."""
+        if not hasattr(self, "_display_name") or self._display_name is None:
+            return self.spec.module_type
         return self._display_name
 
     @name.setter
@@ -296,7 +301,10 @@ class WagoModule:
                     )
                 channel.config = self._channel_init_config[channel.channel_index]
                 channel.name = self._channel_init_config[channel.channel_index].name
-                channel.update_interval = self._channel_init_config[channel.channel_index].update_interval or self.update_interval
+                channel.update_interval = (
+                    self._channel_init_config[channel.channel_index].update_interval
+                    or self.update_interval
+                )
             else:
                 log.warning(
                     "More channels found (%d) in module %s than configured in config (%d). Check module configuration and update config.",
@@ -325,10 +333,13 @@ class WagoModule:
                 f"spec.io_channels not set in {self.__class__.__name__}"
             )
         if channel_type is None:
-            return {
-                channel_type: self.modbus_address.get(channel_type, 0) + value
-                for channel_type, value in self.spec.modbus_channels.items()
-            }
+            result = {}
+            for ch_type, value in self.spec.modbus_channels.items():
+                if self.modbus_address is not None:
+                    result[ch_type] = self.modbus_address.get(ch_type, 0) + value
+                else:
+                    result[ch_type] = value
+            return result
         return self.modbus_address.get(channel_type, 0) + self.spec.modbus_channels.get(
             channel_type, 0
         )

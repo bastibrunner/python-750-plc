@@ -5,16 +5,15 @@ Represents a Wago 750 controller and its connected modules.
 
 from collections.abc import Iterator
 import logging
-from typing import cast
 
 from pydantic import BaseModel
 from pymodbus.client import ModbusTcpClient
 
-from .modules.identifier import ModuleIdentifier
+from .modbus.registers import Register, test_constants
 from .modbus.state import AddressDict, ModbusChannelSpec, ModbusConnection
+from .modules.identifier import ModuleIdentifier
 from .modules.module import WagoModule
 from .modules.spec import IOType
-from .modbus.registers import Register, test_constants
 from .settings import HubConfig, ModuleConfig
 
 log = logging.getLogger(__name__)
@@ -55,7 +54,11 @@ class Modules:
         if isinstance(select, IOType):
             modules = [i for i in self._modules if i.spec.io_type == select]
         elif isinstance(select, str):
-            modules = [i for i in self._modules if i.spec.module_type == select or select in i.aliases]
+            modules = [
+                i
+                for i in self._modules
+                if i.spec.module_type == select or select in i.aliases
+            ]
         else:
             modules = self._modules
         if len(modules) == 1:
@@ -70,14 +73,15 @@ class Modules:
         """Get the modules at a specific index or slice."""
         if isinstance(index, (int, slice)):
             return self._modules[index]
-        elif isinstance(index, str):
+        if isinstance(index, str):
             # If index is a string, try to find the module by alias
-            modules = [m for m in self._modules if index in m.aliases + [m.module_identifier]]
+            modules = [
+                m for m in self._modules if index in m.aliases + [m.module_identifier]
+            ]
             if not modules:
                 raise KeyError(f"No module found with alias {index}")
             return modules[0] if len(modules) == 1 else modules
-        else:
-            raise TypeError("Index must be integer, slice, or string")
+        raise TypeError("Index must be integer, slice, or string")
 
     def __iter__(self) -> Iterator[WagoModule]:
         """Iterate over the modules."""
@@ -135,7 +139,9 @@ class PLCHub:
         self._client.connect()
         self._process_state_width = self._read_data_width_in_state()
         self.connection = ModbusConnection(
-            modbus_tcp_client=self._client, bits_in_state=self._process_state_width, update_interval=self.config.update_interval
+            modbus_tcp_client=self._client,
+            bits_in_state=self._process_state_width,
+            update_interval=self.config.update_interval,
         )
         self.connection.update_state()
 
@@ -218,6 +224,7 @@ class PLCHub:
 
         Returns:
             bool: True if the discovery process was successful, False otherwise.
+
         """
         discovery_register_values = self._get_connected_modules_from_controller()
 
@@ -228,8 +235,7 @@ class PLCHub:
             self._validate_module_discovery()
             self.is_module_discovery_done = True
             return True
-        else:
-            return False
+        return False
 
     def _read_description(self) -> str:
         """Read the description."""
@@ -241,6 +247,8 @@ class PLCHub:
 
     def _read_register(self, address: int, width: int = 1) -> Register:
         """Read the register."""
+        if self._client is None:
+            raise ValueError("Client not initialized")
         response = self._client.read_input_registers(address, count=width)
         return Register(address, response.registers)
 
@@ -278,7 +286,9 @@ class PLCHub:
                     config=module_settings,
                 )
                 self.modules.append_module(module)
-                self._next_address.update(cast(AddressDict, module.get_next_address()))
+                next_address = module.get_next_address()
+                if isinstance(next_address, dict):
+                    self._next_address.update(next_address)
 
     def append_module(self, module: WagoModule) -> None:
         """Append a module to the hub."""
@@ -292,7 +302,7 @@ class PLCHub:
         self.modules.reset_modules()
         self._next_address = self._first_address.copy()
 
-    def _read_data_width_in_state(self) -> ModbusChannelSpec:
+    def _read_data_width_in_state(self) -> dict[str, int]:
         """Read the data width in state."""
         # Read the width from the controller
         channel_spec = {
@@ -305,39 +315,53 @@ class PLCHub:
 
     def _validate_module_discovery(self) -> None:
         """Validate the module discovery."""
-                # If any of the widths is 0, try to calculate it from the modules
+        # If any of the widths is 0, try to calculate it from the modules
         # Calculate width from modules
         self._process_state_width = self._read_data_width_in_state()
-        assert sum(
-            i.spec.modbus_channels.get("discrete", 0)
-            for i in self.modules
-            if i.spec.io_type.digital and i.spec.io_type.input
-        ) == self._process_state_width["discrete"], (
-        f"Discovery failed: Discrete channels count does not match process state width {self._process_state_width['discrete']}"
+        assert (
+            sum(
+                i.spec.modbus_channels.get("discrete", 0)
+                for i in self.modules
+                if i.spec.io_type.digital and i.spec.io_type.input
+            )
+            == self._process_state_width["discrete"]
+        ), (
+            f"Discovery failed: Discrete channels count does not match process state width {self._process_state_width['discrete']}"
         )
 
-        assert sum(
-            i.spec.modbus_channels.get("coil", 0)
-            for i in self.modules
-            if i.spec.io_type.digital and i.spec.io_type.output
-        ) == self._process_state_width["coil"], (
-        f"Discovery failed: Coil channels count does not match process state width {self._process_state_width['coil']}"
+        assert (
+            sum(
+                i.spec.modbus_channels.get("coil", 0)
+                for i in self.modules
+                if i.spec.io_type.digital and i.spec.io_type.output
+            )
+            == self._process_state_width["coil"]
+        ), (
+            f"Discovery failed: Coil channels count does not match process state width {self._process_state_width['coil']}"
         )
 
-        assert sum(
-            i.spec.modbus_channels.get("input", 0)
-            for i in self.modules
-            if not i.spec.io_type.digital and i.spec.io_type.input
-        ) * 16 == self._process_state_width["input"], (
-        f"Discovery failed: Input channels count does not match process state width {self._process_state_width['input']}"
+        assert (
+            sum(
+                i.spec.modbus_channels.get("input", 0)
+                for i in self.modules
+                if not i.spec.io_type.digital and i.spec.io_type.input
+            )
+            * 16
+            == self._process_state_width["input"]
+        ), (
+            f"Discovery failed: Input channels count does not match process state width {self._process_state_width['input']}"
         )
 
-        assert sum(
-            i.spec.modbus_channels.get("holding", 0)
-            for i in self.modules
-            if not i.spec.io_type.digital and i.spec.io_type.output
-        ) * 16 == self._process_state_width["holding"], (
-        f"Discovery failed: Holding channels count does not match process state width {self._process_state_width['holding']}"
+        assert (
+            sum(
+                i.spec.modbus_channels.get("holding", 0)
+                for i in self.modules
+                if not i.spec.io_type.digital and i.spec.io_type.output
+            )
+            * 16
+            == self._process_state_width["holding"]
+        ), (
+            f"Discovery failed: Holding channels count does not match process state width {self._process_state_width['holding']}"
         )
 
     def _read_module_diagnostic(self) -> None:
@@ -383,7 +407,7 @@ class PLCHub:
         return HubConfig(
             host=self._modbus_host,
             port=self._modbus_port,
-            modules=[module.config for module in self.modules]
+            modules=[module.config for module in self.modules],
         )
 
     @config.setter
