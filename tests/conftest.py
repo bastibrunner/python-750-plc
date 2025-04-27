@@ -58,7 +58,7 @@ def modbus_mock() -> Generator[MockModbusTcpClient, None, None]:
 @pytest.fixture(scope="module")
 def modbus_mock_with_modules(
     modules: dict[int, int],
-) -> Generator[MockModbusTcpClient, None, None]:
+) -> Generator[MockModbusTcpClient]:
     """Set up the modbus mock client with specific modules configuration.
 
     Args:
