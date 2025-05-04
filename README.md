@@ -20,7 +20,7 @@ This module provides a high-level abstraction that represents the PLC Hub and it
 from wg750xxx import PlcHub
 
 # Create a hub instance (automatically connects to Modbus)
-hub = PlcHub(ip_address="192.168.1.100")
+hub = PlcHub(ip_address="0.2.1.100")
 
 # Access a digital output module by index
 light_control = hub.modules[4].channels[1]
