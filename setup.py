@@ -9,7 +9,7 @@ with Path("README.md").open("r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="python-750-plc",
-    version="0.2.5",
+    version="0.2.6",
     author="Bastian Brunner",
     author_email="bb@intern-net.de",
     description="Python module for interacting with WAGO 750 series PLCs through Modbus TCP",
