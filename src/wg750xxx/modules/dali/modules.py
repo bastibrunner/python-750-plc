@@ -1,6 +1,6 @@
 """Dali module."""
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from logging import getLogger
 from typing import Any, ClassVar, cast
 
@@ -59,7 +59,7 @@ class Wg750DaliMaster(WagoModule):
         self.status: ModuleStatus = ModuleStatus(self.dali_communication_register)
         self.commands: ModuleCommands = ModuleCommands(self.dali_communication_register)
 
-    def __getitem__(self, key: int | slice ) -> DaliChannel | None:
+    def __getitem__(self, key: int | slice) -> DaliChannel | None:
         """Get a DALI channel by index."""
         if self.channels is None:
             return None
@@ -70,12 +70,6 @@ class Wg750DaliMaster(WagoModule):
         if self.channels is None:
             return 0
         return len(self.channels)
-
-    def __iter__(self) -> Iterator[DaliChannel]:
-        """Iterate over the DALI channels."""
-        if self.channels is None:
-            return iter([])
-        return iter(cast(list[DaliChannel], self.channels))
 
     def create_channels(self) -> None:
         """Create the channels of the DALI master."""

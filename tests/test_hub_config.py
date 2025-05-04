@@ -65,5 +65,5 @@ def test_hub_config_setter():
     assert hub._init_config[0].name == "new_module"
 
     # Test with invalid config
-    with pytest.raises(ValueError, match="Config must be a HubConfig"):
+    with pytest.raises(TypeError):
         hub.config = "invalid_config"

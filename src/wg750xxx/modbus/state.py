@@ -21,6 +21,7 @@ ModbusBits = list[bool]
 AddressDict = dict[ModbusChannelType, int]
 ModbusChannelState = int | bool
 
+
 class ModbusChannelSpec:
     """Class for representing the Modbus channel specification."""
 
@@ -35,7 +36,9 @@ class ModbusChannelSpec:
         # Check if all keys in kwargs are in the ModbusChannelType enum
         if not all(key in get_args(ModbusChannelType) for key in kwargs):
             raise ValueError(f"Invalid channel type: {list(kwargs.keys())}")
-        self._spec: dict[ModbusChannelType, int] = spec if spec is not None else cast(dict[ModbusChannelType, int],kwargs)
+        self._spec: dict[ModbusChannelType, int] = (
+            spec if spec is not None else cast(dict[ModbusChannelType, int], kwargs)
+        )
 
     def __getitem__(self, key: ModbusChannelType) -> int:
         """Get the number of channels for a specific type."""
@@ -67,7 +70,9 @@ class ModbusChannelSpec:
         if key in get_args(ModbusChannelType):
             return self._spec.get(cast(ModbusChannelType, key), 0)
         # For everything else, raise AttributeError (let Python handle private/internal attributes)
-        raise AttributeError(f"{self.__class__.__name__!r} object has no attribute {key!r}")
+        raise AttributeError(
+            f"{self.__class__.__name__!r} object has no attribute {key!r}"
+        )
 
     def __setattr__(self, key: str, value: int) -> None:
         """Set the number of channels for a specific type."""
@@ -296,9 +301,7 @@ class ModbusConnection:
         }
 
         # Channel callback registry: {channel_type: {address: [channels]}}
-        self._channel_registry: dict[
-            ModbusChannelType, dict[int, list[Any]]
-        ] = {
+        self._channel_registry: dict[ModbusChannelType, dict[int, list[Any]]] = {
             "input": {},
             "holding": {},
             "discrete": {},

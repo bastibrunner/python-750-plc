@@ -51,6 +51,10 @@ push = false
     "{pep440_version}",
 ]
 
+[[tool.mypy.overrides]]
+module = ["pytest_socket"]
+ignore_missing_imports = true
+
 [tool.pylint.MAIN]
 py-version = "3.13"
 # Use a conservative default here; 2 should speed up most setups and not hurt

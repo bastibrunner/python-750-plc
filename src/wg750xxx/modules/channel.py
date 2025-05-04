@@ -78,9 +78,9 @@ class WagoChannel:
             value_template=self.value_template,
             update_interval=self.update_interval,
         )
-        self._on_change_callback: Callable | Callable[[Any], None] | Callable[[Any, Any | None], None] | None = (
-            on_change_callback
-        )
+        self._on_change_callback: (
+            Callable | Callable[[Any], None] | Callable[[Any, Any | None], None] | None
+        ) = on_change_callback
 
     def auto_generated_name(self) -> str:
         """Generate a name for the channel."""
@@ -162,13 +162,19 @@ class WagoChannel:
         self._config = config
 
     @property
-    def on_change_callback(self) -> Callable | Callable[[Any], None] | Callable[[Any, Any | None], None] | None:
+    def on_change_callback(
+        self,
+    ) -> Callable | Callable[[Any], None] | Callable[[Any, Any | None], None] | None:
         """Get the callback function that gets called when the channel value changes."""
         return self._on_change_callback
 
     @on_change_callback.setter
     def on_change_callback(
-        self, callback: Callable | Callable[[Any], None] | Callable[[Any, Any | None], None] | None
+        self,
+        callback: Callable
+        | Callable[[Any], None]
+        | Callable[[Any, Any | None], None]
+        | None,
     ) -> None:
         """Set the callback function that gets called when the channel value changes."""
         self._on_change_callback = callback
@@ -201,11 +207,11 @@ class WagoChannel:
         self._last_update = time.time()
         code = getattr(self._on_change_callback, "__code__", None)
         if code is None or not hasattr(code, "co_argcount"):
-            self._on_change_callback(new_value, self) # type: ignore [call-arg]
+            self._on_change_callback(new_value, self)  # type: ignore [call-arg]
         elif code.co_argcount == 1:
-            self._on_change_callback(new_value) # type: ignore [call-arg]
+            self._on_change_callback(new_value)  # type: ignore [call-arg]
         elif code.co_argcount == 2:
-            self._on_change_callback(new_value, self) # type: ignore [call-arg]
+            self._on_change_callback(new_value, self)  # type: ignore [call-arg]
         else:
             raise ValueError(
                 f"Callback function has {code.co_argcount} arguments, expected 1 or 2"

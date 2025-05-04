@@ -270,7 +270,9 @@ class EventButton(DigitalIn):
         self.notify_value_change(event.value)
 
     @property
-    def on_change_callback(self) -> Callable[[Any], None] | Callable[[Any, Any | None], None] | None:
+    def on_change_callback(
+        self,
+    ) -> Callable[[Any], None] | Callable[[Any, Any | None], None] | None:
         """Get the callback function.
 
         Returns:
@@ -310,9 +312,9 @@ class EventButton(DigitalIn):
         # Call the callback directly without checking update interval
         if hasattr(callback, "__code__"):
             if callback.__code__.co_argcount == 1:
-                callback(new_value) # type: ignore[call-arg]
+                callback(new_value)  # type: ignore[call-arg]
             elif callback.__code__.co_argcount == 2:
-                callback(new_value, self) # type: ignore[call-arg]
+                callback(new_value, self)  # type: ignore[call-arg]
             else:
                 raise ValueError(
                     f"Callback function {callback.__name__} has {callback.__code__.co_argcount} arguments, expected 1 or 2"

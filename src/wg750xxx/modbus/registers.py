@@ -115,10 +115,12 @@ class Bits:
         """Get the bit register content as byte register."""
         ## Pad the bit register to the nearest byte
         padding = (8 - len(self._bits) % 8) % 8
-        padded_bits = np.pad(self._bits, (0, padding), mode="constant", constant_values=0)
+        padded_bits = np.pad(
+            self._bits, (0, padding), mode="constant", constant_values=0
+        )
         bytes_list = []
         for i in range(0, len(padded_bits), 8):
-            byte = padded_bits[i:i+8]
+            byte = padded_bits[i : i + 8]
             bytes_list.append(sum(b << (i) for i, b in enumerate(byte)))
         if byteorder == "big":
             bytes_list.reverse()
@@ -127,10 +129,12 @@ class Bits:
     def value_to_words(self, wordorder: Literal["big", "little"] = "big") -> "Words":
         """Get the bit register content as word register."""
         padding = (16 - len(self._bits) % 16) % 16
-        padded_bits = np.pad(self._bits, (0, padding), mode="constant", constant_values=0)
+        padded_bits = np.pad(
+            self._bits, (0, padding), mode="constant", constant_values=0
+        )
         words_list = []
         for i in range(0, len(padded_bits), 16):
-            word = padded_bits[i:i+16]
+            word = padded_bits[i : i + 16]
             words_list.append(sum(b << (i) for i, b in enumerate(word)))
         if wordorder == "big":
             words_list.reverse()
@@ -456,7 +460,9 @@ class Words:
         self.width: int = len(self._words)
 
     @staticmethod
-    def from_int(value: int, byteorder: str = "big") -> np.ndarray[tuple[int, ...], np.dtype[np.uint16]]:
+    def from_int(
+        value: int, byteorder: str = "big"
+    ) -> np.ndarray[tuple[int, ...], np.dtype[np.uint16]]:
         """Convert an integer to a word register."""
         if value < 65536:
             return np.array([value], dtype=np.uint16)
@@ -638,7 +644,9 @@ class Register(Words):
             return self.__class__(address, self._words[index])
         if isinstance(index, int):
             address = self.address + index
-            return self.__class__(address, np.array([self._words[index]], dtype=np.uint16))
+            return self.__class__(
+                address, np.array([self._words[index]], dtype=np.uint16)
+            )
         raise TypeError(f"Invalid index type: {type(index)}")
 
     def __str__(self) -> str:
