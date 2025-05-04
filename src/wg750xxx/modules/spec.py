@@ -1,6 +1,6 @@
 """Module specification."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import NamedTuple
 
 from wg750xxx.modbus.state import ModbusChannelSpec
@@ -35,6 +35,6 @@ class IOType(NamedTuple):
 class ModuleSpec:
     """Module specification."""
 
-    modbus_channels: ModbusChannelSpec = field(default_factory=dict)
+    modbus_channels: ModbusChannelSpec = ModbusChannelSpec()
     io_type: IOType = IOType()
     module_type: str = "None"

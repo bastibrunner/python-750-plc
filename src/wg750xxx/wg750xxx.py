@@ -5,6 +5,7 @@ Represents a Wago 750 controller and its connected modules.
 
 from collections.abc import Iterator
 import logging
+from typing import overload
 
 from pydantic import BaseModel
 from pymodbus.client import ModbusTcpClient
@@ -69,9 +70,20 @@ class Modules:
         """Get the number of modules."""
         return len(self._modules)
 
+    @overload
+    def __getitem__(self, index: int) -> WagoModule: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[WagoModule]: ...
+
+    @overload
+    def __getitem__(self, index: str) -> list[WagoModule] | WagoModule: ...
+
     def __getitem__(self, index: slice | int | str) -> list[WagoModule] | WagoModule:
         """Get the modules at a specific index or slice."""
-        if isinstance(index, (int, slice)):
+        if isinstance(index, slice):
+            return self._modules[index]
+        if isinstance(index, int):
             return self._modules[index]
         if isinstance(index, str):
             # If index is a string, try to find the module by alias
@@ -261,6 +273,8 @@ class PLCHub:
 
     def _get_connected_modules_from_controller(self, reset: bool = True) -> list[int]:
         """Read the connected modules from the controller."""
+        if self._client is None:
+            raise ValueError("Client not initialized")
         if reset:
             self.modules.reset_modules()
         register_values: list[int] = []
@@ -271,6 +285,8 @@ class PLCHub:
 
     def _autocreate_modules(self) -> None:
         """Autocreate modules from the register values."""
+        if self.connection is None:
+            raise ValueError("Connection is not initialized")
         self.modules.reset_modules()
         for value in self._discovery_register_values:
             if value != 0:
@@ -296,21 +312,21 @@ class PLCHub:
 
     def reset_modules(self) -> None:
         """Reset the modules."""
-        self._process_state_width: ModbusChannelSpec = ModbusChannelSpec(
+        self._process_state_width = ModbusChannelSpec(
             input=0, holding=0, discrete=0, coil=0
         )
         self.modules.reset_modules()
         self._next_address = self._first_address.copy()
 
-    def _read_data_width_in_state(self) -> dict[str, int]:
+    def _read_data_width_in_state(self) -> ModbusChannelSpec:
         """Read the data width in state."""
         # Read the width from the controller
-        return {
-            "holding": self._read_register(0x1022).value_to_int(),
-            "input": self._read_register(0x1023).value_to_int(),
-            "coil": self._read_register(0x1024).value_to_int(),
-            "discrete": self._read_register(0x1025).value_to_int(),
-        }
+        return ModbusChannelSpec(
+            holding=self._read_register(0x1022).value_to_int(),
+            input=self._read_register(0x1023).value_to_int(),
+            coil=self._read_register(0x1024).value_to_int(),
+            discrete=self._read_register(0x1025).value_to_int(),
+        )
 
     def _validate_module_discovery(self) -> None:
         """Validate the module discovery."""
@@ -319,7 +335,7 @@ class PLCHub:
         self._process_state_width = self._read_data_width_in_state()
         assert (
             sum(
-                i.spec.modbus_channels.get("discrete", 0)
+                i.spec.modbus_channels.discrete
                 for i in self.modules
                 if i.spec.io_type.digital and i.spec.io_type.input
             )
@@ -330,7 +346,7 @@ class PLCHub:
 
         assert (
             sum(
-                i.spec.modbus_channels.get("coil", 0)
+                i.spec.modbus_channels.coil
                 for i in self.modules
                 if i.spec.io_type.digital and i.spec.io_type.output
             )
@@ -341,7 +357,7 @@ class PLCHub:
 
         assert (
             sum(
-                i.spec.modbus_channels.get("input", 0)
+                i.spec.modbus_channels.input
                 for i in self.modules
                 if not i.spec.io_type.digital and i.spec.io_type.input
             )
@@ -353,7 +369,7 @@ class PLCHub:
 
         assert (
             sum(
-                i.spec.modbus_channels.get("holding", 0)
+                i.spec.modbus_channels.holding
                 for i in self.modules
                 if not i.spec.io_type.digital and i.spec.io_type.output
             )
@@ -412,6 +428,8 @@ class PLCHub:
     @config.setter
     def config(self, config: HubConfig) -> None:
         """Set the config of the hub."""
+        if not isinstance(config, HubConfig):
+            raise TypeError("Config must be a HubConfig")
         self._modbus_host = config.host
         self._modbus_port = config.port
 

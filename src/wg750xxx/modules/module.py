@@ -1,8 +1,9 @@
 """Prototype module."""
 
 from abc import abstractmethod
+from collections.abc import Iterator
 import logging
-from typing import ClassVar, Self
+from typing import ClassVar, Self, overload
 
 from wg750xxx.const import DEFAULT_SCAN_INTERVAL
 from wg750xxx.modbus.state import (
@@ -144,7 +145,8 @@ class WagoModule:
             self.modbus_address = modbus_address
 
         self.channels: list[WagoChannel] | None = None
-        self.config: ModuleConfig | None = config
+        if config is not None:
+            self.config = config
         if self.config is not None and self.config.index != index:
             raise ValueError(
                 f"Module index {index} does not match config index {self.config.index}"
@@ -302,7 +304,10 @@ class WagoModule:
                         hub does not match channel type {channel.channel_type} specified in config"""
                     )
                 channel.config = self._channel_init_config[channel.channel_index]
-                channel.name = self._channel_init_config[channel.channel_index].name
+                channel.name = (
+                    self._channel_init_config[channel.channel_index].name
+                    or channel.channel_type
+                )
                 channel.update_interval = (
                     self._channel_init_config[channel.channel_index].update_interval
                     or self.update_interval
@@ -323,6 +328,12 @@ class WagoModule:
         for channel_type in self.modbus_channels:
             self.modbus_channels[channel_type] = []
 
+    @overload
+    def get_next_address(self, channel_type: ModbusChannelType) -> int: ...
+
+    @overload
+    def get_next_address(self) -> AddressDict: ...
+
     def get_next_address(
         self, channel_type: ModbusChannelType | None = None
     ) -> AddressDict | int:
@@ -342,13 +353,19 @@ class WagoModule:
                 else:
                     result[ch_type] = value
             return result
-        return self.modbus_address.get(channel_type, 0) + self.spec.modbus_channels.get(
-            channel_type, 0
-        )
+        if self.modbus_address is not None:
+            return self.modbus_address.get(
+                channel_type, 0
+            ) + self.spec.modbus_channels.get(channel_type, 0)
+        return self.spec.modbus_channels.get(channel_type, 0)
 
     def config_dump(self) -> str:
         """Get a string representation of the module configuration."""
         return f"{self.description} ({self.spec})"
+
+    def __iter__(self) -> Iterator[Self]:
+        """Get an iterator with only the module itself."""
+        return iter([self])
 
     def __str__(self) -> str:
         """Get a string representation of the module."""

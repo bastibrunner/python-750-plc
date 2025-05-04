@@ -14,8 +14,6 @@ from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 
 logger = logging.getLogger(__name__)
 
-# Using fixtures from conftest.py
-
 # Define counter module type group
 CounterModuleTypes = (Wg750Counter,)
 
@@ -64,6 +62,7 @@ def test_counter_channel_read(
             configured_hub.connection.update_state()
 
         for module in counter_modules:
+            assert module.channels is not None, f"Module {module} has no channels"
             for channel in module.channels:
                 value = channel.read()
                 assert value is not None, f"Channel {channel} read returned None"
@@ -91,6 +90,7 @@ def test_counter_channel_reset(
         pytest.skip("No counter modules found in the configured hub")
 
     for module in counter_modules:
+        assert module.channels is not None, f"Module {module} has no channels"
         for channel in module.channels:
             # Check if the channel has a reset method
             if hasattr(channel, "reset") and callable(channel.reset):
@@ -173,6 +173,7 @@ def test_counter_channel_config(configured_hub: PLCHub) -> None:
         pytest.skip("No counter modules found in the configured hub")
 
     for module in counter_modules:
+        assert module.channels is not None, f"Module {module} has no channels"
         for channel in module.channels:
             config = channel.config
             assert config is not None, f"Channel {channel} has no config"
@@ -201,13 +202,12 @@ def test_32bit_counter_values(
         pytest.skip("No counter modules found in the configured hub")
 
     for module in counter_modules:
+        assert module.channels is not None
         for channel in module.channels:
+            assert channel is not None
             if channel.channel_type == "Counter 32Bit":
                 # For 32-bit counters, test large values that would require 32 bits
                 if hasattr(channel, "modbus_channel") and channel.modbus_channel:
-                    # This test depends on the specific implementation of the counter module
-                    # and how it handles 32-bit values across multiple registers
-
                     # Read current value
                     initial_value = channel.read()
                     error_msg = (

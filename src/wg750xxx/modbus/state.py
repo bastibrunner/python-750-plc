@@ -1,12 +1,12 @@
 """Module for handling Modbus communication and channel types for WAGO 750 series I/O modules."""
 
 from abc import abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, ItemsView
 from functools import wraps
 import logging
 from threading import Thread
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Self, Union
+from typing import Any, ClassVar, Literal, Optional, Self, cast, get_args
 
 from pymodbus.client import ModbusTcpClient
 
@@ -15,15 +15,99 @@ from wg750xxx.const import DEFAULT_SCAN_INTERVAL
 from .exceptions import ModbusCommunicationError
 from .registers import Bits, Words
 
-if TYPE_CHECKING:
-    from wg750xxx.modules.channel import WagoChannel
-
 log = logging.getLogger(__name__)
 ModbusChannelType = Literal["coil", "discrete", "input", "holding"]
 ModbusBits = list[bool]
 AddressDict = dict[ModbusChannelType, int]
-ModbusChannelState = Union[int, bool]
-ModbusChannelSpec = dict[ModbusChannelType, int]
+ModbusChannelState = int | bool
+
+class ModbusChannelSpec:
+    """Class for representing the Modbus channel specification."""
+
+    def __init__(self, spec: dict[ModbusChannelType, int] | None = None, **kwargs: int):
+        """Initialize the ModbusChannelSpec.
+
+        Args:
+            spec: The Modbus channel specification as a dictionary.
+            **kwargs: The Modbus channel specification as keyword arguments.
+
+        """
+        # Check if all keys in kwargs are in the ModbusChannelType enum
+        if not all(key in get_args(ModbusChannelType) for key in kwargs):
+            raise ValueError(f"Invalid channel type: {list(kwargs.keys())}")
+        self._spec: dict[ModbusChannelType, int] = spec if spec is not None else cast(dict[ModbusChannelType, int],kwargs)
+
+    def __getitem__(self, key: ModbusChannelType) -> int:
+        """Get the number of channels for a specific type."""
+        if key not in get_args(ModbusChannelType):
+            raise ValueError(f"Invalid channel type: {key}")
+        if key not in self._spec:
+            return 0
+        return self._spec[key]
+
+    def __setitem__(self, key: ModbusChannelType, value: int) -> None:
+        """Set the number of channels for a specific type."""
+        if key not in get_args(ModbusChannelType):
+            raise ValueError(f"Invalid channel type: {key}")
+        self._spec[key] = value
+
+    def __len__(self) -> int:
+        """Get the total number of channels."""
+        return self.channel_count()
+
+    def get(self, key: ModbusChannelType, default: int = 0) -> int:
+        """Get the number of channels for a specific type."""
+        if key not in get_args(ModbusChannelType):
+            raise ValueError(f"Invalid channel type: {key}")
+        return self._spec.get(key, default)
+
+    def __getattr__(self, key: str) -> int:
+        """Get the number of channels for a specific type."""
+        # Only handle valid ModbusChannelType keys
+        if key in get_args(ModbusChannelType):
+            return self._spec.get(cast(ModbusChannelType, key), 0)
+        # For everything else, raise AttributeError (let Python handle private/internal attributes)
+        raise AttributeError(f"{self.__class__.__name__!r} object has no attribute {key!r}")
+
+    def __setattr__(self, key: str, value: int) -> None:
+        """Set the number of channels for a specific type."""
+        if key in get_args(ModbusChannelType):
+            self._spec[cast(ModbusChannelType, key)] = value
+        else:
+            super().__setattr__(key, value)
+
+    def __delattr__(self, key: str) -> None:
+        """Delete the number of channels for a specific type."""
+        if key in get_args(ModbusChannelType):
+            del self._spec[cast(ModbusChannelType, key)]
+        else:
+            super().__delattr__(key)
+
+    def __repr__(self) -> str:
+        """Get the string representation of the ModbusChannelSpec."""
+        return f"ModbusChannelSpec({self._spec})"
+
+    def __str__(self) -> str:
+        """Get the string representation of the ModbusChannelSpec."""
+        return f"ModbusChannelSpec({self._spec})"
+
+    def __contains__(self, key: ModbusChannelType) -> bool:
+        """Check if the ModbusChannelSpec contains a specific type."""
+        if key not in get_args(ModbusChannelType):
+            raise ValueError(f"Invalid channel type: {key}")
+        return key in self._spec
+
+    def channel_count(self, key: ModbusChannelType | None = None) -> int:
+        """Get the number of channels for a specific type."""
+        if key is None:
+            return sum(self._spec.values())
+        if key not in get_args(ModbusChannelType):
+            raise ValueError(f"Invalid channel type: {key}")
+        return self._spec[key]
+
+    def items(self) -> ItemsView[ModbusChannelType, int]:
+        """Get the items of the ModbusChannelSpec."""
+        return self._spec.items()
 
 
 def auto_reconnect(func: Callable, retries: int = 3) -> Callable:
@@ -51,10 +135,8 @@ class ModbusState:
 
     def __init__(
         self,
-        state_width: Optional[ModbusChannelSpec] = None,
-        state: Optional[
-            Union["ModbusState", dict[ModbusChannelType, Union[int, Bits, Words]]]
-        ] = None,
+        state_width: ModbusChannelSpec | None = None,
+        state: Self | dict[ModbusChannelType, int | Bits | Words] | None = None,
     ) -> None:
         """Initialize the ModbusState.
 
@@ -64,10 +146,10 @@ class ModbusState:
 
         """
         if state_width is not None:
-            self.coil: Bits = Bits(size=state_width["coil"])
-            self.discrete: Bits = Bits(size=state_width["discrete"])
-            self.input: Words = Words(size=state_width["input"])
-            self.holding: Words = Words(size=state_width["holding"])
+            self.coil: Bits = Bits(size=state_width.coil)
+            self.discrete: Bits = Bits(size=state_width.discrete)
+            self.input: Words = Words(size=state_width.input)
+            self.holding: Words = Words(size=state_width.holding)
         elif state is not None:
             if isinstance(state, ModbusState):
                 self.coil = state.coil.copy()
@@ -75,6 +157,15 @@ class ModbusState:
                 self.input = state.input.copy()
                 self.holding = state.holding.copy()
             else:
+                if not isinstance(state["coil"], Bits):
+                    raise TypeError("coil must be a Bits object")
+                if not isinstance(state["discrete"], Bits):
+                    raise TypeError("discrete must be a Bits object")
+                if not isinstance(state["input"], Words):
+                    raise TypeError("input must be a Words object")
+                if not isinstance(state["holding"], Words):
+                    raise TypeError("holding must be a Words object")
+
                 self.coil = (
                     state["coil"]
                     if isinstance(state["coil"], Bits)
@@ -98,11 +189,11 @@ class ModbusState:
         else:
             raise ValueError("Either state_width or state must be provided")
 
-    def __getitem__(self, key: ModbusChannelType) -> Union[Words, Bits]:
+    def __getitem__(self, key: ModbusChannelType) -> Words | Bits:
         """Get the state of a specific channel type."""
         return getattr(self, key)
 
-    def __setitem__(self, key: ModbusChannelType, value: Union[Words, Bits]) -> None:
+    def __setitem__(self, key: ModbusChannelType, value: Words | Bits) -> None:
         """Set the state of a specific channel type."""
         setattr(self, key, value)
 
@@ -125,7 +216,7 @@ class ModbusState:
         """Get the addresses that have changed between the current state and the previous state."""
         changed_addresses: dict[ModbusChannelType, set[int]] = {}
         if channel_types is None:
-            channel_types = vars(self).keys()
+            channel_types = list(get_args(ModbusChannelType))
         for key in channel_types or []:
             changed_addresses[key] = set()
             self_state = getattr(self, key)
@@ -181,14 +272,14 @@ class ModbusConnection:
         self.modbus_tcp_client = modbus_tcp_client
         self.bits_in_state: ModbusChannelSpec = bits_in_state
         self.state: ModbusState = ModbusState(
-            {
-                "input": self.bits_in_state["input"] // 16,
-                "holding": self.bits_in_state["holding"] // 16,
-                "discrete": self.bits_in_state["discrete"],
-                "coil": self.bits_in_state["coil"],
-            }
+            ModbusChannelSpec(
+                input=self.bits_in_state.input // 16,
+                holding=self.bits_in_state.holding // 16,
+                discrete=self.bits_in_state.discrete,
+                coil=self.bits_in_state.coil,
+            )
         )
-        self._update_thread = None
+        self._update_thread: Thread | None = None
         self._running = False
         # Default update intervals in seconds for each state type
         self._update_intervals = {
@@ -206,7 +297,7 @@ class ModbusConnection:
 
         # Channel callback registry: {channel_type: {address: [channels]}}
         self._channel_registry: dict[
-            ModbusChannelType, dict[int, list[WagoChannel]]
+            ModbusChannelType, dict[int, list[Any]]
         ] = {
             "input": {},
             "holding": {},
@@ -249,7 +340,7 @@ class ModbusConnection:
             width,
         )
         log.debug("Registers: %s", registers.value_to_hex())
-        self.state["input"][address : address + width] = registers.value
+        self.state.input[address : address + width] = registers
 
     @auto_reconnect
     def _update_holding_state(
@@ -280,9 +371,7 @@ class ModbusConnection:
             width,
         )
         log.debug("Registers: %s", registers.value_to_hex())
-        self.state["holding"][address - 0x0200 : address + width - 0x0200] = (
-            registers.value
-        )
+        self.state.holding[address - 0x0200 : address + width - 0x0200] = registers
 
     @auto_reconnect
     def _update_discrete_state(
@@ -312,7 +401,7 @@ class ModbusConnection:
             width,
         )
         log.debug("Bits: %s", bits.value_to_bin())
-        self.state["discrete"][address : address + width] = bits.value
+        self.state.discrete[address : address + width] = bits
 
     @auto_reconnect
     def _update_coil_state(
@@ -341,7 +430,7 @@ class ModbusConnection:
             width,
         )
         log.debug("Bits: %s", bits.value_to_bin())
-        self.state["coil"][address - 0x0200 : address + width - 0x0200] = bits.value
+        self.state.coil[address - 0x0200 : address + width - 0x0200] = bits
 
     def update_state(
         self,
@@ -396,7 +485,9 @@ class ModbusConnection:
                     else:
                         continue
 
-                    channel.notify_value_change(value)
+                    # check if the object has a notify_value_change method
+                    if hasattr(channel, "notify_value_change"):
+                        channel.notify_value_change(value)
 
     def _continuous_update(self) -> None:
         """Continuously update the state of the Modbus connection in a separate thread.
@@ -418,7 +509,7 @@ class ModbusConnection:
                     if current_time - self._last_updates[state_type] >= interval / 1000:
                         log.debug("Updating %s state", state_type)
                         update_counter[state_type] += 1
-                        self.update_state(state_type)
+                        self.update_state(cast(ModbusChannelType, state_type))
                         self._last_updates[state_type] = current_time
                 if current_time - last_log_time > 30:
                     log.info("Updates in last 30 seconds: %s", str(update_counter))
@@ -560,7 +651,7 @@ class ModbusConnection:
         if update:
             self._update_holding_state(address, width)
 
-        registers = self.state["holding"][address : address + width]
+        registers = self.state.holding[address : address + width]
         if isinstance(registers, Words):
             return registers
         if isinstance(registers, Bits):
@@ -573,7 +664,7 @@ class ModbusConnection:
         if update:
             self._update_discrete_state(address, 1)
 
-        input_value = self.state["discrete"][address]
+        input_value = self.state.discrete[address]
         if isinstance(input_value, Bits):
             return bool(input_value.value_to_int())
         return bool(input_value)
@@ -592,7 +683,7 @@ class ModbusConnection:
         if update:
             log.debug("Updating discrete state from modbus")
             self._update_discrete_state(address, width)
-        value = self.state["discrete"][address : address + width]
+        value = Bits(self.state.discrete[address : address + width])
         log.debug(
             "Reading discrete inputs from 0x%s - 0x%s Value: %s",
             f"{address:04x}",
@@ -622,7 +713,7 @@ class ModbusConnection:
         """
         if update:
             self._update_coil_state(address, width)
-        value = self.state["coil"][address : address + width]
+        value = Bits(self.state.coil[address : address + width])
         log.debug(
             "Reading coils from 0x%s - 0x%s Value: %s",
             f"{address:04x}",
@@ -659,7 +750,7 @@ class ModbusConnection:
             f"{address + len(bits):04x}",
             bits.value_to_bin(),
         )
-        self.modbus_tcp_client.write_coils(address, bits.value)
+        self.modbus_tcp_client.write_coils(address, bits.value.tolist())
         self._update_coil_state()
 
     @auto_reconnect
@@ -696,11 +787,11 @@ class ModbusConnection:
             registers.value_to_hex(),
             registers.value_to_bin(),
         )
-        self.modbus_tcp_client.write_registers(address, registers.value)
+        self.modbus_tcp_client.write_registers(address, registers.value.tolist())
         self._update_holding_state()
 
     def register_channel_callback(
-        self, modbus_channel: "ModbusChannel", wago_channel: "WagoChannel"
+        self, modbus_channel: "ModbusChannel", object: object
     ) -> None:
         """Register a callback to be called when a channel value changes."""
         if modbus_channel.channel_type not in self._channel_registry:
@@ -720,10 +811,10 @@ class ModbusConnection:
 
         self._channel_registry[modbus_channel.channel_type][
             modbus_channel.address
-        ].append(wago_channel)
+        ].append(object)
 
     def unregister_channel_callback(
-        self, modbus_channel: "ModbusChannel", wago_channel: "WagoChannel"
+        self, modbus_channel: "ModbusChannel", object: Any
     ) -> None:
         """Unregister a callback for a channel."""
         if (
@@ -734,8 +825,8 @@ class ModbusConnection:
             channel_list = self._channel_registry[modbus_channel.channel_type][
                 modbus_channel.address
             ]
-            if wago_channel in channel_list:
-                channel_list.remove(wago_channel)
+            if object in channel_list:
+                channel_list.remove(object)
 
 
 class ModbusChannel:

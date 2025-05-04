@@ -44,6 +44,7 @@ def test_channel_is_event_button_when_device_class_set(configured_hub: PLCHub) -
     assert len(digital_input_modules) > 0, "No digital input modules found for testing"
 
     test_module = digital_input_modules[0]
+    assert test_module.channels is not None, "Test module should have channels"
     original_channel = test_module.channels[0]
 
     # Create a new channel with device_class set to event_button

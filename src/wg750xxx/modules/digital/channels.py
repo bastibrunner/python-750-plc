@@ -1,9 +1,10 @@
 """Basic channels for the Wago 750 series."""
 
 import asyncio
+from collections.abc import Callable
 from enum import Enum
 import time
-from typing import Any, Callable, Optional, Self
+from typing import Any, Self
 
 from wg750xxx.modbus.state import Coil, Discrete
 from wg750xxx.modules.channel import WagoChannel
@@ -40,7 +41,7 @@ class DigitalIn(WagoChannel):
             return EventButton(self.modbus_channel, self.config)
         return self
 
-    def read(self) -> bool:
+    def read(self) -> str | bool | None:
         """Read the state of the digital input channel."""
         if self.modbus_channel is None:
             raise WagoModuleError(f"Modbus channel not set for {self.name}")
@@ -85,6 +86,8 @@ class DigitalOut(WagoChannel):
 
     def write(self, value: Any) -> None:
         """Write a value to the digital output channel."""
+        if self.modbus_channel is None:
+            raise WagoModuleError(f"Modbus channel not set for {self.name}")
         self.modbus_channel.write(value)
 
     def read(self) -> bool:
@@ -144,12 +147,12 @@ class EventButton(DigitalIn):
                 from_channel.on_change_callback,
             )
         self._last_state: bool = False
-        self._last_press_time: Optional[float] = None
-        self._last_release_time: Optional[float] = None
-        self._press_start_time: Optional[float] = None
+        self._last_press_time: float | None = None
+        self._last_release_time: float | None = None
+        self._press_start_time: float | None = None
         self._current_press_duration: float = 0
-        self._last_event: Optional[DigitalEvent] = None
-        self._raw_callback: Optional[Callable[[Any, Any | None], None]] = None
+        self._last_event: DigitalEvent | None = None
+        self._raw_callback: Callable[[Any, Any | None], None] | None = None
         self._last_state_change_time: float = 0
         self._pending_tasks: set[asyncio.Task] = set()
         self._current_event: DigitalEvent | None = None
@@ -187,8 +190,9 @@ class EventButton(DigitalIn):
         # Button was just released
         elif not value and self._last_state:
             self._last_release_time = current_time
-            self._current_press_duration = current_time - self._press_start_time
-            self._handle_press_end_event()
+            if self._press_start_time is not None:
+                self._current_press_duration = current_time - self._press_start_time
+                self._handle_press_end_event()
 
         self._last_state_change_time = current_time
         self._last_state = value
@@ -266,7 +270,7 @@ class EventButton(DigitalIn):
         self.notify_value_change(event.value)
 
     @property
-    def on_change_callback(self) -> Callable[[Any, Any | None], None] | None:
+    def on_change_callback(self) -> Callable[[Any], None] | Callable[[Any, Any | None], None] | None:
         """Get the callback function.
 
         Returns:
@@ -306,9 +310,9 @@ class EventButton(DigitalIn):
         # Call the callback directly without checking update interval
         if hasattr(callback, "__code__"):
             if callback.__code__.co_argcount == 1:
-                callback(new_value)
+                callback(new_value) # type: ignore[call-arg]
             elif callback.__code__.co_argcount == 2:
-                callback(new_value, self)
+                callback(new_value, self) # type: ignore[call-arg]
             else:
                 raise ValueError(
                     f"Callback function {callback.__name__} has {callback.__code__.co_argcount} arguments, expected 1 or 2"

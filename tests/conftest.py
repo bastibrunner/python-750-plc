@@ -166,4 +166,6 @@ def dali_hub(
             default=str,
         )
     )
+    assert hub_instance is not None, "Hub instance should be present"
+    assert hub_instance.connection is not None, "Hub connection should be present"
     return hub_instance

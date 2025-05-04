@@ -14,7 +14,6 @@ from .mock.mock_modbus_tcp_client import MockModbusTcpClient
 logger = logging.getLogger(__name__)
 
 
-# ruff: noqa: SLF001
 def test_controller_info_read(basic_hub: PLCHub) -> None:
     """Test that controller info is read correctly."""
     controller_info = basic_hub.info

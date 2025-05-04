@@ -59,14 +59,11 @@ class Wg750DaliMaster(WagoModule):
         self.status: ModuleStatus = ModuleStatus(self.dali_communication_register)
         self.commands: ModuleCommands = ModuleCommands(self.dali_communication_register)
 
-    def __getitem__(self, key: int) -> DaliChannel | None:
+    def __getitem__(self, key: int | slice ) -> DaliChannel | None:
         """Get a DALI channel by index."""
         if self.channels is None:
             return None
-        channel = self.channels[key]
-        if isinstance(channel, DaliChannel):
-            return channel
-        return None
+        return cast(DaliChannel, self.channels[key])
 
     def __len__(self) -> int:
         """Get the number of DALI channels."""
@@ -144,7 +141,7 @@ class Wg750DaliMaster(WagoModule):
         if code is None or not hasattr(code, "co_argcount"):
             self._on_change_callback(new_value, self)
         elif code.co_argcount == 1:
-            self._on_change_callback(new_value)
+            self._on_change_callback(new_value)  # type: ignore[call-arg]
         elif code.co_argcount == 2:
             self._on_change_callback(new_value, self)
         else:

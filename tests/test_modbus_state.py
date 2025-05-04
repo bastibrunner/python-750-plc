@@ -4,14 +4,14 @@
 import numpy as np
 
 from wg750xxx.modbus.registers import Bits, Words
-from wg750xxx.modbus.state import ModbusState
+from wg750xxx.modbus.state import ModbusChannelSpec, ModbusState
 
 
 def test_modbus_state_get_changed_addresses() -> None:
     """Test the get_changed_addresses method with the new type annotation."""
     # Create two ModbusState instances
-    state1 = ModbusState({"input": 2, "holding": 2, "discrete": 8, "coil": 8})
-    state2 = ModbusState({"input": 2, "holding": 2, "discrete": 8, "coil": 8})
+    state1 = ModbusState(ModbusChannelSpec(input=2, holding=2, discrete=8, coil=8))
+    state2 = ModbusState(ModbusChannelSpec(input=2, holding=2, discrete=8, coil=8))
 
     # Set up state1 with some values
     state1.input = Words(np.array([0x1234, 0x5678], dtype=np.uint16))

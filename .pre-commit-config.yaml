@@ -6,7 +6,7 @@ repos:
         args:
           - --fix
       - id: ruff-format
-        files: ^((homeassistant|pylint|script|tests)/.+)?[^/]+\.(py|pyi)$
+        files: ^((pylint|script|tests)/.+)?[^/]+\.(py|pyi)$
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
@@ -16,7 +16,7 @@ repos:
           - --skip="./.*,*.csv,*.json,*.ambr"
           - --quiet-level=2
         exclude_types: [csv, json, html]
-        exclude: ^tests/fixtures/|homeassistant/generated/|tests/components/.*/snapshots/
+        exclude: ^tests/fixtures/|tests/components/.*/snapshots/
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -50,4 +50,4 @@ repos:
           - --py311-plus
           - --force
           - --keep-updates
-        files: ^(homeassistant|tests|script)/.+\.py$
+        files: ^(tests|script)/.+\.py$

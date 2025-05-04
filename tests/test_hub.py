@@ -93,7 +93,7 @@ def test_module_analog_output_bits_match(configured_hub: PLCHub) -> None:
 def test_channel_count_match_all_modules(configured_hub: PLCHub) -> None:
     """Test if the channel count matches the configured modules."""
     for module in configured_hub.modules:
-        channels_spec: int = sum(module.spec.modbus_channels.values())
+        channels_spec: int = len(module.spec.modbus_channels)
         channels: int = sum(len(i) for i in module.modbus_channels.values())
         assert channels_spec == channels, (
             f"Error in Module {module.display_name}: Channel count mismatch: spec ({channels_spec}) != channels ({channels})"

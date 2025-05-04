@@ -7,6 +7,7 @@ from collections.abc import Generator
 import pytest
 from pytest_socket import enable_socket, socket_allow_hosts
 
+from wg750xxx.modbus.state import ModbusChannelType
 from wg750xxx.modules.module import WagoModule
 from wg750xxx.modules.spec import IOType
 from wg750xxx.settings import HubConfig, ModuleConfig
@@ -35,7 +36,7 @@ def module_config(hub: PLCHub) -> list[ModuleConfig]:
 
 def test_read_register(hub: PLCHub) -> None:
     """Test reading registers."""
-    client = hub._client  # noqa: SLF001
+    client = hub._client
     if client is None:
         pytest.skip("No physical PLC connection")
 
@@ -71,6 +72,9 @@ def test_read_register(hub: PLCHub) -> None:
 def test_module_count(hub: PLCHub) -> None:
     """Test counting analog input modules."""
     modules = hub.modules.get(IOType(input=True))
+    assert isinstance(modules, list), (
+        f"Error: expected list of analog input modules, got {type(modules)}"
+    )
     assert len(modules) == 5, (
         f"Error: expected 5 analog input modules, got {len(modules)}"
     )
@@ -79,10 +83,16 @@ def test_module_count(hub: PLCHub) -> None:
         f"Error: expected 1 analog output modules, got {len(modules)}"
     )
     modules = hub.modules.get(IOType(digital=True, input=True))
+    assert isinstance(modules, list), (
+        f"Error: expected list of analog input modules, got {type(modules)}"
+    )
     assert len(modules) == 19, (
         f"Error: expected 19 digital input modules, got {len(modules)}"
     )
     modules = hub.modules.get(IOType(digital=True, output=True))
+    assert isinstance(modules, list), (
+        f"Error: expected list of analog input modules, got {type(modules)}"
+    )
     assert len(modules) == 17, (
         f"Error: expected 17 digital output modules, got {len(modules)}"
     )
@@ -96,9 +106,8 @@ def test_module_count_total(hub: PLCHub) -> None:
 def test_module_digital_input_bits_match(hub: PLCHub) -> None:
     """Test matching digital input bits."""
     digital_input_bits = sum(
-        module.spec.modbus_channels["discrete"]
+        module.spec.modbus_channels.discrete
         for module in hub.modules.get(IOType(digital=True, input=True))
-        if module.spec.io_type.input
     )
     assert digital_input_bits == 146, (
         f"Error: expected 146 digital input bits, got {digital_input_bits}"
@@ -123,7 +132,6 @@ def test_module_analog_input_bits_match(hub: PLCHub) -> None:
         sum(
             module.spec.modbus_channels["input"]
             for module in hub.modules.get(IOType(input=True))
-            if module.spec.io_type.input
         )
         * 16
     )
@@ -137,8 +145,7 @@ def test_module_analog_output_bits_match(hub: PLCHub) -> None:
     analog_outputs_bits = (
         sum(
             module.spec.modbus_channels["holding"]
-            for module in [hub.modules.get(IOType(output=True))]
-            if module.spec.io_type.output
+            for module in hub.modules.get(IOType(output=True))
         )
         * 16
     )
@@ -150,7 +157,7 @@ def test_module_analog_output_bits_match(hub: PLCHub) -> None:
 def test_channel_count_match_all_modules(hub: PLCHub) -> None:
     """Test matching channel counts for all modules."""
     for module in hub.modules:
-        channels_spec = sum(module.spec.modbus_channels.values())
+        channels_spec = len(module.spec.modbus_channels)
         channels_actual = sum(
             len(channels) for channels in module.modbus_channels.values()
         )
@@ -163,10 +170,13 @@ def test_module_counter_count(hub: PLCHub) -> None:
     """Test counter count."""
     modules = hub.modules.get("404")
     assert modules is not None, "Counter modules should be present"
+    assert isinstance(modules, list), "Counter modules should be a list"
     assert isinstance(modules, list) and len(modules) == 3, (
         f"Error: expected 3 counter modules, got {len(modules)}"
     )
     for module in modules:
+        assert module is not None
+        assert module.channels is not None
         assert module.channels[0].channel_type == "Counter 32Bit", (
             f"Error: expected Counter 32Bit channel, got {module.channels[0].channel_type}"
         )
@@ -226,10 +236,14 @@ def test_module_counter_count(hub: PLCHub) -> None:
     ],
 )
 def test_module_channel_type(
-    hub: PLCHub, module_idx: int, modbus_channel_type: str
+    hub: PLCHub, module_idx: int, modbus_channel_type: ModbusChannelType
 ) -> None:
     """Test module channel types."""
-    for channel in hub.modules[module_idx].channels:
+    assert hub.modules is not None, "Hub should have modules"
+    modules = hub.modules[module_idx]
+    assert modules is not None, "Module should be present"
+    assert modules.channels is not None, "Module should have channels"
+    for channel in modules.channels:
         assert channel.channel_type == modbus_channel_type, (
             f"Error: expected {modbus_channel_type} channel, got {channel.channel_type}"
         )
@@ -250,7 +264,10 @@ def test_module_channel_type(
     ],
 )
 def test_module_addresses(
-    hub: PLCHub, module_idx: int, modbus_channel_type: str, start_address: int
+    hub: PLCHub,
+    module_idx: int,
+    modbus_channel_type: ModbusChannelType,
+    start_address: int,
 ) -> None:
     """Test module addresses."""
     for index, channel in enumerate(

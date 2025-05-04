@@ -109,7 +109,7 @@ class CounterCommunicationRegister:
 
     def __init__(
         self, modbus_connection: ModbusConnection, modbus_address: AddressDict
-    ):
+    ) -> None:
         """Initialize the CounterCommunicationRegister."""
         self.modbus_connection = modbus_connection
         self.modbus_address = modbus_address
@@ -143,7 +143,9 @@ class CounterCommunicationRegister:
     @property
     def value(self) -> int:
         """Get the value of the counter."""
-        return self.input_register[1:3].bytes().value_to_int()
+        register_subset = self.input_register[1:3]
+        bytes_instance = register_subset.bytes()
+        return bytes_instance.value_to_int()
 
     @value.setter
     def value(self, value: int) -> None:
@@ -154,7 +156,7 @@ class CounterCommunicationRegister:
             int.from_bytes(value_bytes[0:2], byteorder="little"),
             int.from_bytes(value_bytes[2:4], byteorder="little"),
         ]
-        self.input_register[1:3] = Words(word_values)
+        self.input_register[1:3] = Words(word_values)  # type: ignore[assignment]
         self.control_byte.set_counter = True
         # TODO: we should async wait for the counter to be reset
         if self.status_byte.ack_set_counter:

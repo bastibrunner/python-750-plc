@@ -300,15 +300,15 @@ def test_module_config_with_mismatching_config_too_short(
     assert hub.modules[3].name == "test_module_4", (
         "Module 4 should have name test_module_4"
     )
-    assert hub.modules[4].name is None, "Module 5 should have name None"
-    assert hub.modules[5].name is None, "Module 6 should have name None"
-    assert hub.modules[6].name is None, "Module 7 should have name None"
-    assert hub.modules[7].name is None, "Module 8 should have name None"
-    assert hub.modules[8].name is None, "Module 9 should have name None"
-    assert hub.modules[9].name is None, "Module 10 should have name None"
-    assert hub.modules[10].name is None, "Module 11 should have name None"
-    assert hub.modules[11].name is None, "Module 12 should have name None"
-    assert hub.modules[12].name is None, "Module 13 should have name None"
+    assert hub.modules[4].name == "DO", "Module 5 should have name DO"
+    assert hub.modules[5].name == "DI", "Module 6 should have name DI"
+    assert hub.modules[6].name == "DI", "Module 7 should have name DI"
+    assert hub.modules[7].name == "460", "Module 8 should have name DI"
+    assert hub.modules[8].name == "460", "Module 9 should have name 459"
+    assert hub.modules[9].name == "460", "Module 10 should have name 453"
+    assert hub.modules[10].name == "451", "Module 11 should have name 451"
+    assert hub.modules[11].name == "404", "Module 12 should have name 404"
+    assert hub.modules[12].name == "DI", "Module 13 should have name DI"
 
 
 def test_module_config_with_mismatching_config_too_long(
