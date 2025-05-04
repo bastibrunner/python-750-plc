@@ -8,16 +8,16 @@ with Path("README.md").open("r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="wg750xxx",
-    version="0.1.0",
-    author="Sebastian",
-    author_email="your.email@example.com",
+    name="python-750-plc",
+    version="0.2.0",
+    author="Bastian Brunner",
+    author_email="bb@intern-net.de",
     description="Python module for interacting with WAGO 750 series PLCs through Modbus TCP",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/python-wg750xxx",
+    url="https://github.com/bastibrunner/python-750-plc",
     project_urls={
-        "Bug Tracker": "https://github.com/yourusername/python-wg750xxx/issues",
+        "Bug Tracker": "https://github.com/bastibrunner/python-750-plc/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -33,7 +33,8 @@ setuptools.setup(
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
     install_requires=[
-        "pymodbus",
-        "pyyaml",
+        "numpy>=2.2.2",
+        "pydantic>=2.10.6",
+        "pymodbus>=3.8.3",
     ],
 )
