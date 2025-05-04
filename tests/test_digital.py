@@ -37,6 +37,8 @@ def test_digital_input_modules_created(configured_hub: PLCHub) -> None:
             f"Module {module.display_name} has no channels"
         )
 
+        assert module.channels is not None, f"Module {module} has no channels"
+
         for channel in module.channels:
             assert channel.channel_type == "Digital In", (
                 f"Channel {channel} has incorrect type {channel.channel_type}"
@@ -61,6 +63,8 @@ def test_digital_output_modules_created(configured_hub: PLCHub) -> None:
             f"Module {module.display_name} has no channels"
         )
 
+        assert module.channels is not None, f"Module {module} has no channels"
+
         for channel in module.channels:
             assert channel.channel_type == "Digital Out", (
                 f"Channel {channel} has incorrect type {channel.channel_type}"
@@ -79,6 +83,8 @@ def test_digital_input_channel_read(
         for module in configured_hub.modules:
             if not module.spec.io_type.digital or not module.spec.io_type.input:
                 continue
+
+            assert module.channels is not None, f"Module {module} has no channels"
 
             for channel in module.channels:
                 value = channel.read()
@@ -102,6 +108,8 @@ def test_digital_output_channel_write(
         for module in configured_hub.modules:
             if not module.spec.io_type.digital or not module.spec.io_type.output:
                 continue
+
+            assert module.channels is not None, f"Module {module} has no channels"
 
             for channel in module.channels:
                 test_value = bool(randint(0, 1))
@@ -168,6 +176,8 @@ def test_digital_channel_config(configured_hub: PLCHub) -> None:
         if not module.spec.io_type.digital:
             continue
 
+        assert module.channels is not None, f"Module {module} has no channels"
+
         for channel in module.channels:
             config = channel.config
             assert config is not None, f"Channel {channel} has no config"
@@ -176,7 +186,7 @@ def test_digital_channel_config(configured_hub: PLCHub) -> None:
 
             # Test auto-generated name
             original_name = channel.name
-            channel.name = None
+            channel.name = None  # type: ignore[assignment]
             expected_name = re.compile(r"^.*\s\d+$")
             error_msg = (
                 f"Auto-generated name is incorrect: {channel.auto_generated_name()}"

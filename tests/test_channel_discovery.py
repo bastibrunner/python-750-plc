@@ -19,12 +19,15 @@ def test_channel_config_without_config(
 ) -> None:
     """Test channel config without config."""
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=True)
+    assert hub.modules[0].channels is not None, "Module 0 should have channels"
     assert len(hub.modules[0].channels) == 0, "Should have 0 channels"
+    assert hub.modules[1].channels is not None, "Module 1 should have channels"
     assert len(hub.modules[1].channels) == 4, "Should have 4 channels"
     expected_channel_names = re.compile(r"(\w+ )+\d+")
     expected_channel_types = re.compile(r"(\w+ )+")
     expected_channel_ids = re.compile(r"\d+_.\w+_\d+_\w+")
     for module in hub.modules:
+        assert module.channels is not None, "Module should have channels"
         for channel in module.channels:
             assert expected_channel_names.match(channel.name), (
                 f"Channels name {channel.name} doesn't match expected pattern {expected_channel_names.pattern}"
@@ -45,6 +48,7 @@ def test_channel_config_with_matching_config(
     modules_config = []
     for i, module in enumerate(hub.modules):
         channels_config = []
+        assert module.channels is not None, "Module should have channels"
         for j, channel in enumerate(module.channels):
             channels_config.append(
                 ChannelConfig(
@@ -76,6 +80,7 @@ def test_channel_config_with_matching_config(
         assert module.config.name == f"test_module_{module.index}", (
             f"Module {i} should have name test_module_{module.index}"
         )
+        assert module.channels is not None, "Module should have channels"
         assert len(module.channels) > 0, f"Module {i} should have channels"
         for j, channel in enumerate(module.channels):
             assert channel.name == f"Test Channel {j}", (
@@ -106,42 +111,39 @@ def test_channel_config_with_matching_config(
     hub = PLCHub(
         HubConfig(host="dummy", port=502, modules=modules_config), initialize=True
     )
-
-    assert len(hub.modules[0].channels) == 0, "Should have 4 channels"
-    assert len(hub.modules[1].channels) == 4, "Should have 4 channels"
-    assert hub.modules[1].channels[0].name == "Test Channel 0", (
+    module0 = hub.modules[0]
+    assert module0 is not None, "Module 0 should not be None"
+    assert module0.channels is not None, "Module 0 should have channels"
+    assert len(module0.channels) == 0, "Should have 0 channels"
+    module1 = hub.modules[1]
+    assert module1 is not None, "Module 1 should not be None"
+    assert module1.channels is not None, "Module 1 should have channels"
+    assert len(module1.channels) == 4, "Should have 4 channels"
+    assert module1.channels[0].name == "Test Channel 0", (
         "Should have name Test Channel 0"
     )
-    assert hub.modules[1].channels[1].name == "Test Channel 1", (
+    assert module1.channels[1].name == "Test Channel 1", (
         "Should have name Test Channel 1"
     )
-    assert hub.modules[1].channels[2].name == "Test Channel 2", (
+    assert module1.channels[2].name == "Test Channel 2", (
         "Should have name Test Channel 2"
     )
-    assert hub.modules[1].channels[3].name == "Test Channel 3", (
+    assert module1.channels[3].name == "Test Channel 3", (
         "Should have name Test Channel 3"
     )
-    assert hub.modules[1].channels[0].channel_type == "Int16 Out", (
-        "Should have type Int16 Out"
-    )
-    assert hub.modules[1].channels[1].channel_type == "Int16 Out", (
-        "Should have type Int16 Out"
-    )
-    assert hub.modules[1].channels[2].channel_type == "Int16 Out", (
-        "Should have type Int16 Out"
-    )
-    assert hub.modules[1].channels[3].channel_type == "Int16 Out", (
-        "Should have type Int16 Out"
-    )
-    assert hub.modules[1].channels[0].config.id == "1_559_0_int16_out", (
+    assert module1.channels[0].channel_type == "Int16 Out", "Should have type Int16 Out"
+    assert module1.channels[1].channel_type == "Int16 Out", "Should have type Int16 Out"
+    assert module1.channels[2].channel_type == "Int16 Out", "Should have type Int16 Out"
+    assert module1.channels[3].channel_type == "Int16 Out", "Should have type Int16 Out"
+    assert module1.channels[0].config.id == "1_559_0_int16_out", (
         "Should have id 1_559_0_int16_out"
     )
-    assert hub.modules[1].channels[1].config.id == "1_559_1_int16_out", (
+    assert module1.channels[1].config.id == "1_559_1_int16_out", (
         "Should have id 1_559_1_int16_out"
     )
-    assert hub.modules[1].channels[2].config.id == "1_559_2_int16_out", (
+    assert module1.channels[2].config.id == "1_559_2_int16_out", (
         "Should have id 1_559_2_int16_out"
     )
-    assert hub.modules[1].channels[3].config.id == "1_559_3_int16_out", (
+    assert module1.channels[3].config.id == "1_559_3_int16_out", (
         "Should have id 1_559_3_int16_out"
     )

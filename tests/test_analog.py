@@ -48,7 +48,7 @@ def test_analog_input_modules_created(configured_hub: PLCHub) -> None:
         assert len(module.channels or []) > 0, (
             f"Module {module.display_name} has no channels"
         )
-
+        assert module.channels is not None, f"Module {module} has no channels"
         for channel in module.channels:
             assert channel.channel_type in ["Int8 In", "Int16 In", "Float16 In"], (
                 f"Channel {channel} has incorrect type {channel.channel_type}"
@@ -95,6 +95,8 @@ def test_analog_input_channel_read(
             configured_hub.connection.update_state()
 
         for module in analog_input_modules:
+            assert module.channels is not None, f"Module {module} has no channels"
+
             for channel in module.channels:
                 value = channel.read()
                 assert value is not None, f"Channel {channel} read returned None"
@@ -122,6 +124,8 @@ def test_analog_output_channel_write(
     tested_channels = 0
     for _ in range(10):  # Test multiple random values
         for module in analog_output_modules:
+            assert module.channels is not None, f"Module {module} has no channels"
+
             for channel in module.channels:
                 test_value = randint(0, 65535)  # Random value in 16-bit range
                 channel.write(test_value)
@@ -212,7 +216,7 @@ def test_analog_channel_config(configured_hub: PLCHub) -> None:
 
             # Test auto-generated name
             original_name = channel.name
-            channel.name = None
+            channel.name = None  # type: ignore[assignment]
             expected_name = re.compile(r"Int\d+ (In|Out) \d+")
             error_msg = (
                 f"Auto-generated name is incorrect: {channel.auto_generated_name()}"

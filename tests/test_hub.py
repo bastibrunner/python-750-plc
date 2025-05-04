@@ -2,6 +2,7 @@
 
 # pylint: disable=protected-access,redefined-outer-name,unused-argument
 import logging
+from typing import Literal
 
 import pytest
 from pytest_subtests import SubTests
@@ -153,7 +154,7 @@ def test_all_configured_modules_present(
 def test_module_addresses(
     configured_hub: PLCHub,
     module_idx: int,
-    modbus_channel_type: str,
+    modbus_channel_type: Literal["coil", "discrete", "input", "holding"],
     start_address: int,
 ) -> None:
     """Test module addresses."""

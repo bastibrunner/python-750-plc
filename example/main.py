@@ -60,7 +60,8 @@ def main() -> None:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        hub.connection.stop_continuous_update()
+        if hub.connection is not None:
+            hub.connection.stop_continuous_update()
 
 
 if __name__ == "__main__":

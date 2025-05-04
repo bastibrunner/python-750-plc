@@ -160,7 +160,7 @@ def test_controller_config_with_none(modbus_mock: MockModbusTcpClient) -> None:
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
-        hub.config = None
+        hub.config = None  # type: ignore[assignment]
     assert hub.config is not None, "Config should not be None"
 
 
@@ -171,7 +171,7 @@ def test_controller_config_with_invalid_config(
     hub = PLCHub(HubConfig(host="dummy", port=502), initialize=False)
 
     with pytest.raises(ValueError):
-        hub.config = "invalid_config"
+        hub.config = "invalid_config"  # type: ignore[assignment]
 
 
 def test_controller_module_config(modbus_mock: MockModbusTcpClient) -> None:
